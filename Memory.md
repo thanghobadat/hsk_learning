@@ -16,7 +16,8 @@
   - **Thư viện bên thứ 3:** `hanzi-writer` (nhúng CDN cho tính năng mô phỏng thứ tự từng nét viết chữ Hán động & bảng tập viết).
   - **Âm thanh:** Web Speech API (`SpeechSynthesis`) + Fallback Audio phát âm tiếng Trung chuẩn Bắc Kinh (`src/utils/speech.js`).
   - **AI Engine:** Tích hợp Google Gemini API + Local AI Fallback Engine tạo bài tập và giải thích ngữ pháp (`src/utils/aiService.js`).
-  - **Build tool:** Vite 6 (`npm run dev`, `npm run build`).
+  - **Build tool:** Vite 6 (`npm run dev`, `npm run build`), cấu hình `vite.config.js` với `base: './'`.
+  - **Git Repository:** [https://github.com/thanghobadat/hsk_learning](https://github.com/thanghobadat/hsk_learning) (Branch chính: `main`).
 
 ---
 
