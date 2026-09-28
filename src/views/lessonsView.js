@@ -91,6 +91,8 @@ export function renderLessonsView(container) {
     render();
   }
 
+  let isSidebarOpenMobile = false;
+
   function render() {
     const levelConfig = HSK_LEVELS[currentLevelId];
     const allCompleted = getCompletedLessons();
@@ -106,6 +108,13 @@ export function renderLessonsView(container) {
     }
 
     const isLessonDone = allCompleted.includes(currentLesson.id);
+
+    // Dọn dẹp nội dung cũ nếu có hook cleanup
+    const oldContent = container.querySelector('#lessonInnerContent');
+    if (oldContent && typeof oldContent._cleanup === 'function') {
+      oldContent._cleanup();
+      oldContent._cleanup = null;
+    }
 
     container.innerHTML = `
       <div class="lessons-page animate-fade-in">
@@ -145,10 +154,24 @@ export function renderLessonsView(container) {
           </div>
         </div>
 
+        <!-- Mobile Lesson Bar (Chỉ hiển thị trên điện thoại để không bị choán màn hình) -->
+        <div class="sidebar-mobile-toggle glass-panel">
+          <div class="toggle-mobile-left">
+            <span class="vocab-level-badge" style="background-color: ${levelConfig.badgeBg}; font-size: 0.72rem; padding: 2px 8px;">
+              ${levelConfig.name} • Bài ${currentLesson.number}
+            </span>
+            <span class="toggle-mobile-title">${currentLesson.title.split(':')[1] || currentLesson.title}</span>
+          </div>
+          <button class="btn-toggle-sidebar" id="btnToggleSidebarMobile">
+            <span>${isSidebarOpenMobile ? '✕ Đóng' : '📖 Đổi bài'}</span>
+            <span class="toggle-arrow">${isSidebarOpenMobile ? '▲' : '▼'}</span>
+          </button>
+        </div>
+
         <!-- 2-Column Layout: Sidebar Lessons List & Main Lesson Content -->
         <div class="lessons-layout">
           <!-- Sidebar: List of Lessons for Active Level -->
-          <aside class="lessons-sidebar glass-panel">
+          <aside class="lessons-sidebar glass-panel ${isSidebarOpenMobile ? 'mobile-open' : 'mobile-closed'}" id="lessonsSidebar">
             <h3 class="sidebar-heading">Danh Mục ${levelConfig.data.length} Bài Học (${levelConfig.name})</h3>
             <div class="lessons-nav-list">
               ${levelConfig.data.map(l => {
@@ -169,7 +192,7 @@ export function renderLessonsView(container) {
           </aside>
 
           <!-- Main Content of Selected Lesson -->
-          <main class="lesson-main-content">
+          <main class="lesson-main-content" id="lessonMainContent">
             <!-- Lesson Header Card -->
             <div class="lesson-header-card glass-panel">
               <div class="lesson-header-left">
@@ -208,12 +231,34 @@ export function renderLessonsView(container) {
       </div>
     `;
 
+    // Sự kiện toggle mở/đóng danh mục bài học trên mobile
+    container.querySelector('#btnToggleSidebarMobile')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playSound('click');
+      isSidebarOpenMobile = !isSidebarOpenMobile;
+      const sidebar = container.querySelector('#lessonsSidebar');
+      const toggleBtn = container.querySelector('#btnToggleSidebarMobile');
+      if (sidebar) {
+        if (isSidebarOpenMobile) {
+          sidebar.classList.remove('mobile-closed');
+          sidebar.classList.add('mobile-open');
+        } else {
+          sidebar.classList.remove('mobile-open');
+          sidebar.classList.add('mobile-closed');
+        }
+      }
+      if (toggleBtn) {
+        toggleBtn.innerHTML = `<span>${isSidebarOpenMobile ? '✕ Đóng' : '📖 Đổi bài'}</span><span class="toggle-arrow">${isSidebarOpenMobile ? '▲' : '▼'}</span>`;
+      }
+    });
+
     // Sự kiện chuyển cấp độ (Level Pills)
     container.querySelectorAll('.btn-level-pill').forEach(btn => {
       btn.addEventListener('click', () => {
         playSound('click');
         currentLevelId = btn.dataset.level;
         localStorage.setItem('hsk_current_level', currentLevelId);
+        isSidebarOpenMobile = false;
         render();
       });
     });
@@ -224,7 +269,14 @@ export function renderLessonsView(container) {
         playSound('click');
         const lessonId = item.dataset.lessonId;
         setSelectedLessonId(currentLevelId, lessonId);
+        isSidebarOpenMobile = false;
         render();
+        // Cuộn mượt đến nội dung bài nếu đang trên màn hình di động
+        if (window.innerWidth <= 960) {
+          setTimeout(() => {
+            container.querySelector('#lessonMainContent')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 80);
+        }
       });
     });
 
@@ -240,6 +292,7 @@ export function renderLessonsView(container) {
     const innerTabBtns = container.querySelectorAll('.lesson-inner-tab-btn');
     innerTabBtns.forEach(btn => {
       btn.addEventListener('click', () => {
+        if (activeInnerTab === btn.dataset.innerTab) return;
         playSound('click');
         activeInnerTab = btn.dataset.innerTab;
         renderInnerContent(container.querySelector('#lessonInnerContent'), currentLesson);
@@ -252,6 +305,11 @@ export function renderLessonsView(container) {
   }
 
   function renderInnerContent(contentEl, lesson) {
+    if (contentEl && typeof contentEl._cleanup === 'function') {
+      contentEl._cleanup();
+      contentEl._cleanup = null;
+    }
+
     if (activeInnerTab === 'vocab') {
       contentEl.innerHTML = `
         <div class="lesson-words-grid animate-fade-in">
@@ -365,6 +423,10 @@ export function renderLessonsView(container) {
 
       function renderReviewSubTab() {
         if (!subContentEl) return;
+        if (typeof subContentEl._cleanup === 'function') {
+          subContentEl._cleanup();
+          subContentEl._cleanup = null;
+        }
         if (activeReviewSubTab === 'flashcard') {
           renderLessonFlashcard(subContentEl, lesson);
         } else if (activeReviewSubTab === 'reflex') {
@@ -377,6 +439,7 @@ export function renderLessonsView(container) {
       const subTabBtns = contentEl.querySelectorAll('.review-subtab-btn');
       subTabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+          if (activeReviewSubTab === btn.dataset.subtab) return;
           playSound('click');
           activeReviewSubTab = btn.dataset.subtab;
           subTabBtns.forEach(b => b.classList.remove('active'));

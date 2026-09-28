@@ -168,28 +168,32 @@ function attachDrillEvents(container, drills, lesson) {
       if (!pool || !slot) return;
 
       // Click tile ở pool -> chuyển lên slot
-      pool.querySelectorAll('.btn-word-tile').forEach(tile => {
-        tile.addEventListener('click', () => {
-          playSound('click');
-          slot.querySelector('.slot-placeholder')?.remove();
-          slot.appendChild(tile);
-        });
+      pool.addEventListener('click', (e) => {
+        const tile = e.target.closest('.btn-word-tile');
+        if (!tile) return;
+        e.preventDefault();
+        e.stopPropagation();
+        playSound('click');
+        slot.querySelector('.slot-placeholder')?.remove();
+        slot.appendChild(tile);
       });
 
       // Click tile ở slot -> trả về pool
       slot.addEventListener('click', (e) => {
         const tile = e.target.closest('.btn-word-tile');
-        if (tile) {
-          playSound('click');
-          pool.appendChild(tile);
-          if (slot.children.length === 0) {
-            slot.innerHTML = `<span class="slot-placeholder">Nhấp chọn các khối từ bên dưới để ghép thành câu...</span>`;
-          }
+        if (!tile) return;
+        e.preventDefault();
+        e.stopPropagation();
+        playSound('click');
+        pool.appendChild(tile);
+        if (slot.querySelectorAll('.btn-word-tile').length === 0) {
+          slot.innerHTML = `<span class="slot-placeholder">Nhấp chọn các khối từ bên dưới để ghép thành câu...</span>`;
         }
       });
 
       // Nút Xếp lại
-      btnClear?.addEventListener('click', () => {
+      btnClear?.addEventListener('click', (e) => {
+        e.stopPropagation();
         playSound('click');
         slot.querySelectorAll('.btn-word-tile').forEach(t => pool.appendChild(t));
         slot.innerHTML = `<span class="slot-placeholder">Nhấp chọn các khối từ bên dưới để ghép thành câu...</span>`;

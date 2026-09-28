@@ -3,8 +3,24 @@ import confetti from 'canvas-confetti';
 
 export function renderLessonReflex(container, lesson) {
   let activeMode = 'matching'; // 'matching' | 'lightning'
+  let currentModeCleanup = null;
+
+  function cleanupAll() {
+    if (typeof currentModeCleanup === 'function') {
+      currentModeCleanup();
+      currentModeCleanup = null;
+    }
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  }
+
+  // Attach cleanup hook to container for external tab switchers
+  container._cleanup = cleanupAll;
 
   function render() {
+    cleanupAll();
+
     container.innerHTML = `
       <div class="lesson-reflex-wrapper animate-fade-in">
         <!-- Reflex Mode Switcher -->
@@ -25,8 +41,11 @@ export function renderLessonReflex(container, lesson) {
     const modeBtns = container.querySelectorAll('.btn-reflex-mode');
     modeBtns.forEach(btn => {
       btn.addEventListener('click', () => {
+        const targetMode = btn.dataset.mode;
+        if (activeMode === targetMode) return; // Tránh bấm lại bị lặp vòng
+
         playSound('click');
-        activeMode = btn.dataset.mode;
+        activeMode = targetMode;
         modeBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         renderActiveMode();
@@ -37,11 +56,14 @@ export function renderLessonReflex(container, lesson) {
   }
 
   function renderActiveMode() {
+    cleanupAll();
     const contentEl = container.querySelector('#reflexModeContent');
+    if (!contentEl) return;
+
     if (activeMode === 'matching') {
-      initSpeedMatch(contentEl, lesson);
+      currentModeCleanup = initSpeedMatch(contentEl, lesson);
     } else {
-      initLightningQuiz(contentEl, lesson);
+      currentModeCleanup = initLightningQuiz(contentEl, lesson);
     }
   }
 
@@ -83,10 +105,22 @@ function initSpeedMatch(container, lesson) {
   let selectedSecond = null;
   let matchedPairs = 0;
   let timerInterval = null;
+  let shakeTimeout = null;
   let elapsedSeconds = 0;
   let isTimerRunning = false;
   let isLocked = false;
   let combo = 0;
+
+  function cleanup() {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+    if (shakeTimeout) {
+      clearTimeout(shakeTimeout);
+      shakeTimeout = null;
+    }
+  }
 
   container.innerHTML = `
     <div class="match-game-container">
@@ -135,6 +169,10 @@ function initSpeedMatch(container, lesson) {
     if (isTimerRunning) return;
     isTimerRunning = true;
     timerInterval = setInterval(() => {
+      if (!container.isConnected) {
+        cleanup();
+        return;
+      }
       elapsedSeconds++;
       const mins = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
       const secs = String(elapsedSeconds % 60).padStart(2, '0');
@@ -145,12 +183,16 @@ function initSpeedMatch(container, lesson) {
 
   function stopTimer() {
     isTimerRunning = false;
-    if (timerInterval) clearInterval(timerInterval);
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
   }
 
   // Gắn sự kiện click thẻ
   container.querySelectorAll('.match-tile').forEach(tile => {
-    tile.addEventListener('click', () => {
+    tile.addEventListener('click', (e) => {
+      e.stopPropagation();
       if (isLocked) return;
       if (tile.classList.contains('matched') || tile.classList.contains('selected')) return;
 
@@ -216,15 +258,20 @@ function initSpeedMatch(container, lesson) {
       updateCombo();
       isLocked = true;
 
-      selectedFirst.classList.add('shake');
-      selectedSecond.classList.add('shake');
+      const card1 = selectedFirst;
+      const card2 = selectedSecond;
 
-      setTimeout(() => {
-        if (selectedFirst) selectedFirst.classList.remove('selected', 'shake');
-        if (selectedSecond) selectedSecond.classList.remove('selected', 'shake');
+      card1.classList.add('shake');
+      card2.classList.add('shake');
+
+      shakeTimeout = setTimeout(() => {
+        if (!container.isConnected) return;
+        if (card1) card1.classList.remove('selected', 'shake');
+        if (card2) card2.classList.remove('selected', 'shake');
         selectedFirst = null;
         selectedSecond = null;
         isLocked = false;
+        shakeTimeout = null;
       }, 700);
     }
   }
@@ -238,39 +285,179 @@ function initSpeedMatch(container, lesson) {
   }
 
   container.querySelector('#btnRestartMatch')?.addEventListener('click', () => {
-    stopTimer();
+    cleanup();
     initSpeedMatch(container, lesson);
   });
 
   container.querySelector('#btnPlayAgainMatch')?.addEventListener('click', () => {
-    stopTimer();
+    cleanup();
     initSpeedMatch(container, lesson);
   });
+
+  return cleanup;
 }
 
 /**
  * CHẾ ĐỘ 2: PHẢN XẠ CHỚP NHOÁNG 5 GIÂY (Lightning Reflex Quiz)
+ * - Màn hình Sẵn sàng trước khi chạy.
+ * - Cho phép Tạm dừng / Dừng lại bất kỳ lúc nào.
+ * - Cleanup an toàn, triệt tiêu hoàn toàn zombie timer & spam audio.
  */
 function initLightningQuiz(container, lesson) {
   const words = [...lesson.words];
-  // Tạo 10 câu hỏi ngẫu nhiên từ bài
-  const quizWords = [...words].sort(() => Math.random() - 0.5).slice(0, 10);
-
+  let quizWords = [];
   let currentQIdx = 0;
   let score = 0;
   let combo = 0;
   let countdownTimer = null;
-  let timeLeftMs = 5000;
+  let nextQTimeout = null;
+  let count321Interval = null;
+  let totalDurationMs = 5000;
+  let remainingMs = 5000;
+  let startTime = 0;
   let isAnswered = false;
+  let isPaused = false;
+  let currentCorrectIdx = -1;
 
+  function cleanup() {
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+    if (nextQTimeout) {
+      clearTimeout(nextQTimeout);
+      nextQTimeout = null;
+    }
+    if (count321Interval) {
+      clearInterval(count321Interval);
+      count321Interval = null;
+    }
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  }
+
+  // 1. MÀN HÌNH SẴN SÀNG (READY SCREEN)
+  function renderReadyScreen() {
+    cleanup();
+
+    container.innerHTML = `
+      <div class="lightning-ready-card glass-panel animate-scale-up">
+        <div class="ready-badge">⏱️ THỬ THÁCH PHẢN XẠ TỐC ĐỘ CAO</div>
+        <h2 class="ready-title">Phản Xạ Chớp Nhoáng (5 Giây)</h2>
+        <p class="ready-desc">
+          Bộ não của bạn sẽ được kích hoạt phản xạ liên tưởng tức thì. Mỗi câu hỏi chỉ có đúng <strong>5 giây</strong> đếm ngược!
+        </p>
+
+        <div class="ready-features-grid">
+          <div class="feature-item glass-panel">
+            <span class="f-icon">⏱️</span>
+            <div class="f-info">
+              <strong>5 Giây / Câu</strong>
+              <span>Đồng hồ đếm ngược tự động</span>
+            </div>
+          </div>
+          <div class="feature-item glass-panel">
+            <span class="f-icon">⚡</span>
+            <div class="f-info">
+              <strong>Thưởng Tốc Độ</strong>
+              <span>Chọn càng nhanh, điểm càng cao</span>
+            </div>
+          </div>
+          <div class="feature-item glass-panel">
+            <span class="f-icon">🔥</span>
+            <div class="f-info">
+              <strong>Chuỗi Combo</strong>
+              <span>Nhân điểm liên tục khi đúng</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ready-action-row">
+          <button class="btn-primary-action btn-pulse" id="btnStartLightningChallenge">
+            <span>⚡ Bắt Đầu Thử Thách (10 Câu)</span>
+          </button>
+        </div>
+      </div>
+    `;
+
+    container.querySelector('#btnStartLightningChallenge')?.addEventListener('click', () => {
+      playSound('click');
+      startCountdown321();
+    });
+  }
+
+  // 2. ĐẾM NGƯỢC 3.. 2.. 1.. GO
+  function startCountdown321() {
+    cleanup();
+    let count = 3;
+
+    container.innerHTML = `
+      <div class="lightning-countdown-overlay glass-panel animate-scale-up">
+        <div class="cd-title">Chuẩn bị phản xạ...</div>
+        <div class="cd-number animate-pulse" id="cdNumberText">${count}</div>
+        <div class="cd-hint">Tập trung nhìn mặt chữ và phiên âm</div>
+      </div>
+    `;
+
+    playSound('click');
+
+    count321Interval = setInterval(() => {
+      if (!container.isConnected) {
+        cleanup();
+        return;
+      }
+
+      count--;
+      const numEl = container.querySelector('#cdNumberText');
+      if (count > 0) {
+        playSound('click');
+        if (numEl) {
+          numEl.textContent = count;
+          numEl.classList.remove('animate-pulse');
+          void numEl.offsetWidth; // trigger reflow
+          numEl.classList.add('animate-pulse');
+        }
+      } else {
+        clearInterval(count321Interval);
+        count321Interval = null;
+        if (numEl) numEl.textContent = 'CHIẾN! 🔥';
+        playSound('success');
+        setTimeout(() => {
+          if (!container.isConnected) return;
+          startQuizGame();
+        }, 500);
+      }
+    }, 850);
+  }
+
+  // 3. KHỞI TẠO BỘ ĐỀ VÀ BẮT ĐẦU CÂU HỎI
+  function startQuizGame() {
+    cleanup();
+    quizWords = [...words].sort(() => Math.random() - 0.5).slice(0, 10);
+    currentQIdx = 0;
+    score = 0;
+    combo = 0;
+    isPaused = false;
+    renderQuestion();
+  }
+
+  // 4. HIỂN THỊ CÂU HỎI HIỆN TẠI
   function renderQuestion() {
+    cleanup();
+
+    if (!container.isConnected) return;
+
     if (currentQIdx >= quizWords.length) {
       renderQuizSummary();
       return;
     }
 
     isAnswered = false;
-    timeLeftMs = 5000;
+    isPaused = false;
+    totalDurationMs = 5000;
+    remainingMs = 5000;
+
     const word = quizWords[currentQIdx];
 
     // Phát âm từ vựng
@@ -284,11 +471,11 @@ function initLightningQuiz(container, lesson) {
       .map(w => w.meaning);
 
     const choices = [...wrongOptions, word.meaning].sort(() => Math.random() - 0.5);
-    const correctIdx = choices.indexOf(word.meaning);
+    currentCorrectIdx = choices.indexOf(word.meaning);
 
     container.innerHTML = `
-      <div class="lightning-quiz-container">
-        <!-- Header -->
+      <div class="lightning-quiz-container animate-fade-in">
+        <!-- Header & Control Bar -->
         <div class="lightning-stats-bar glass-panel">
           <div class="l-stat">
             <span>Câu hỏi:</span>
@@ -299,8 +486,18 @@ function initLightningQuiz(container, lesson) {
             <strong class="highlight" id="lScore">${score}</strong>
           </div>
           <div class="l-stat">
-            <span>Chuỗi Combo:</span>
+            <span>Combo:</span>
             <strong id="lCombo">x${combo}</strong>
+          </div>
+
+          <!-- Controls: Pause & Quit -->
+          <div class="lightning-ctrl-actions" style="margin-left: auto; display: flex; gap: 0.4rem;">
+            <button class="btn-l-ctrl" id="btnPauseLightning" title="Tạm dừng hoặc tiếp tục">
+              ⏸️ Tạm Dừng
+            </button>
+            <button class="btn-l-ctrl danger" id="btnQuitLightning" title="Dừng thử thách">
+              ⏹️ Thoát
+            </button>
           </div>
         </div>
 
@@ -310,14 +507,14 @@ function initLightningQuiz(container, lesson) {
         </div>
 
         <!-- Question Card -->
-        <div class="lightning-card glass-panel animate-fade-in">
+        <div class="lightning-card glass-panel" id="lQuestionCard">
           <div class="lightning-hanzi">${word.hanzi}</div>
           <div class="lightning-pinyin">${word.pinyin}</div>
-          <button class="btn-audio-circle-sm" id="btnRepeatAudio" title="Nghe lại">🔊</button>
+          <button class="btn-audio-circle-sm" id="btnRepeatAudio" title="Nghe lại phát âm">🔊</button>
         </div>
 
-        <!-- Choices List -->
-        <div class="lightning-choices-grid">
+        <!-- Choices Grid (Single column on mobile, 2 columns on desktop) -->
+        <div class="lightning-choices-grid" id="lChoicesGrid">
           ${choices.map((ch, idx) => `
             <button class="btn-lightning-choice glass-panel" data-choice-idx="${idx}">
               <span class="choice-tag">${['A', 'B', 'C', 'D'][idx]}</span>
@@ -325,55 +522,141 @@ function initLightningQuiz(container, lesson) {
             </button>
           `).join('')}
         </div>
+
+        <!-- Pause Overlay (Hidden by default) -->
+        <div class="lightning-pause-overlay hidden" id="lPauseOverlay">
+          <div class="pause-box glass-panel animate-scale-up">
+            <div class="pause-icon">⏸️</div>
+            <h3>Đang Tạm Dừng Thử Thách</h3>
+            <p>Đồng hồ đếm ngược đã dừng. Sẵn sàng hãy nhấn Tiếp tục.</p>
+            <div class="pause-btns">
+              <button class="btn-primary" id="btnResumeLightning">▶️ Tiếp Tục Chơi</button>
+              <button class="btn-ghost-sm" id="btnQuitFromPause" style="margin-top: 0.5rem;">⏹️ Thoát về menu</button>
+            </div>
+          </div>
+        </div>
       </div>
     `;
 
-    container.querySelector('#btnRepeatAudio')?.addEventListener('click', () => {
+    // Nghe lại phát âm
+    container.querySelector('#btnRepeatAudio')?.addEventListener('click', (e) => {
+      e.stopPropagation();
       speakChinese(word.hanzi);
     });
 
-    // Bắt đầu đếm ngược 5s
+    // Nút Tạm dừng
+    container.querySelector('#btnPauseLightning')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePause();
+    });
+
+    // Nút Thoát
+    container.querySelector('#btnQuitLightning')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playSound('click');
+      cleanup();
+      renderReadyScreen();
+    });
+
+    // Nút Tiếp tục từ overlay
+    container.querySelector('#btnResumeLightning')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePause();
+    });
+
+    // Nút Thoát từ overlay
+    container.querySelector('#btnQuitFromPause')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      cleanup();
+      renderReadyScreen();
+    });
+
+    // Bắt đầu đếm ngược 5 giây
+    runCountdownTimer();
+
+    // Gắn sự kiện chọn đáp án (có stopPropagation và touch support)
+    container.querySelectorAll('.btn-lightning-choice').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (isAnswered || isPaused) return;
+
+        isAnswered = true;
+        if (countdownTimer) {
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+        }
+
+        const chosenIdx = parseInt(btn.dataset.choiceIdx, 10);
+        const elapsed = Date.now() - startTime;
+        handleAnswer(chosenIdx, currentCorrectIdx, elapsed);
+      });
+    });
+  }
+
+  // Chạy đồng hồ đếm ngược
+  function runCountdownTimer() {
+    if (countdownTimer) clearInterval(countdownTimer);
+
+    startTime = Date.now();
+    const initialRemaining = remainingMs;
     const timerFillEl = container.querySelector('#lTimerFill');
-    const startTime = Date.now();
-    const totalDuration = 5000;
 
     countdownTimer = setInterval(() => {
-      if (isAnswered) {
+      if (!container.isConnected) {
+        cleanup();
+        return;
+      }
+
+      if (isAnswered || isPaused) {
         clearInterval(countdownTimer);
+        countdownTimer = null;
         return;
       }
 
       const elapsed = Date.now() - startTime;
-      const remaining = Math.max(0, totalDuration - elapsed);
-      const percent = (remaining / totalDuration) * 100;
+      remainingMs = Math.max(0, initialRemaining - elapsed);
+      const percent = (remainingMs / totalDurationMs) * 100;
 
       if (timerFillEl) {
         timerFillEl.style.width = `${percent}%`;
         if (percent < 30) {
           timerFillEl.style.background = 'var(--crimson-500)';
+        } else if (percent < 60) {
+          timerFillEl.style.background = 'var(--gold-500)';
         }
       }
 
-      if (remaining <= 0) {
+      if (remainingMs <= 0) {
         clearInterval(countdownTimer);
-        handleAnswerTimeout(correctIdx);
+        countdownTimer = null;
+        handleAnswerTimeout(currentCorrectIdx);
       }
-    }, 50);
-
-    // Gắn sự kiện chọn đáp án
-    container.querySelectorAll('.btn-lightning-choice').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (isAnswered) return;
-        isAnswered = true;
-        clearInterval(countdownTimer);
-
-        const chosenIdx = parseInt(btn.dataset.choiceIdx, 10);
-        const elapsed = Date.now() - startTime;
-        handleAnswer(chosenIdx, correctIdx, elapsed);
-      });
-    });
+    }, 40);
   }
 
+  // Tạm dừng / Tiếp tục
+  function togglePause() {
+    isPaused = !isPaused;
+    const pauseOverlay = container.querySelector('#lPauseOverlay');
+    const pauseBtn = container.querySelector('#btnPauseLightning');
+
+    if (isPaused) {
+      playSound('click');
+      if (countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+      pauseOverlay?.classList.remove('hidden');
+      if (pauseBtn) pauseBtn.textContent = '▶️ Tiếp Tục';
+    } else {
+      playSound('click');
+      pauseOverlay?.classList.add('hidden');
+      if (pauseBtn) pauseBtn.textContent = '⏸️ Tạm Dừng';
+      runCountdownTimer();
+    }
+  }
+
+  // Xử lý khi người dùng chọn đáp án
   function handleAnswer(chosenIdx, correctIdx, elapsedMs) {
     const buttons = container.querySelectorAll('.btn-lightning-choice');
     buttons.forEach((btn, idx) => {
@@ -385,25 +668,38 @@ function initLightningQuiz(container, lesson) {
     if (chosenIdx === correctIdx) {
       playSound('correct');
       combo++;
-      // Thưởng điểm theo tốc độ (nhanh nhất 100 điểm, chậm nhất 50 điểm)
+      // Thưởng tốc độ
       const speedBonus = Math.max(0, Math.round((5000 - elapsedMs) / 50));
       const points = 50 + speedBonus + (combo * 10);
       score += points;
+
+      const scoreEl = container.querySelector('#lScore');
+      const comboEl = container.querySelector('#lCombo');
+      if (scoreEl) scoreEl.textContent = score;
+      if (comboEl) comboEl.textContent = `x${combo}`;
     } else {
       playSound('wrong');
       combo = 0;
+      const comboEl = container.querySelector('#lCombo');
+      if (comboEl) comboEl.textContent = 'x0';
     }
 
-    setTimeout(() => {
+    // Chuyển câu hỏi kế tiếp một cách an toàn
+    nextQTimeout = setTimeout(() => {
+      if (!container.isConnected) return;
       currentQIdx++;
       renderQuestion();
     }, 1000);
   }
 
+  // Xử lý khi hết 5 giây (Timeout)
   function handleAnswerTimeout(correctIdx) {
     isAnswered = true;
     playSound('wrong');
     combo = 0;
+
+    const comboEl = container.querySelector('#lCombo');
+    if (comboEl) comboEl.textContent = 'x0';
 
     const buttons = container.querySelectorAll('.btn-lightning-choice');
     buttons.forEach((btn, idx) => {
@@ -411,14 +707,18 @@ function initLightningQuiz(container, lesson) {
       if (idx === correctIdx) btn.classList.add('correct');
     });
 
-    setTimeout(() => {
+    nextQTimeout = setTimeout(() => {
+      if (!container.isConnected) return;
       currentQIdx++;
       renderQuestion();
     }, 1200);
   }
 
+  // 5. MÀN HÌNH TỔNG KẾT
   function renderQuizSummary() {
-    let rank = 'Nhẹ Nhàng 🐢';
+    cleanup();
+
+    let rank = 'Khởi Động Nhẹ Nhàng 🐢';
     let icon = '🌱';
     if (score >= 1000) {
       rank = 'Thần Tốc Bậc Thầy ⚡⚡';
@@ -437,16 +737,29 @@ function initLightningQuiz(container, lesson) {
         <h3 class="summary-title">Hoàn Thành Thử Thách Phản Xạ!</h3>
         <div class="summary-score-badge">${score} Điểm</div>
         <div class="summary-rank-tag">Danh hiệu: <strong>${rank}</strong></div>
-        <button class="btn-primary" id="btnRestartLightning" style="margin-top: 1.5rem;">
-          ⚡ Chơi Lại Vòng Khác
-        </button>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap;">
+          <button class="btn-primary" id="btnRestartLightning">
+            ⚡ Thử Thách Vòng Mới
+          </button>
+          <button class="btn-ghost-sm" id="btnBackToReady" style="padding: 0.75rem 1.25rem;">
+            📋 Xem Hướng Dẫn
+          </button>
+        </div>
       </div>
     `;
 
     container.querySelector('#btnRestartLightning')?.addEventListener('click', () => {
-      initLightningQuiz(container, lesson);
+      startCountdown321();
+    });
+
+    container.querySelector('#btnBackToReady')?.addEventListener('click', () => {
+      renderReadyScreen();
     });
   }
 
-  renderQuestion();
+  // Bắt đầu từ Màn hình Sẵn sàng
+  renderReadyScreen();
+
+  return cleanup;
 }

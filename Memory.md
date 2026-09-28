@@ -157,7 +157,28 @@ chinese_learning/
 
 ---
 
-## 6. Ghi Chú Kỹ Thuật Cho Các Phiên Làm Việc Tới
+## 6. Ghi Chú Kỹ Thuật & Cập Nhật Gần Nhất
+- **Cập nhật 28/09/2026 (Fix bug Phản Xạ & Tối ưu Responsive Đa Thiết Bị - PC, iPhone 15 Pro, iPad):**
+  - **Phản xạ chớp nhoáng 5s:** Bổ sung màn hình Sẵn sàng (Ready Screen) tránh auto-start gấp; thêm bộ đếm 3-2-1; bổ sung nút `⏸️ Tạm Dừng` và `⏹️ Thoát`; xây dựng cơ chế `cleanup()` triệt để cho `setInterval` / `setTimeout` / `speechSynthesis` để xóa bỏ hoàn toàn hiện tượng zombie timer loop & spam âm thanh khi chuyển tab hoặc bấm lại.
+  - **Tối ưu bài tập trên điện thoại:**
+    - Sidebar danh mục bài học trên mobile đã có thanh toggle `📖 Đổi bài`, tự động thu gọn để không chiếm toàn bộ màn hình và không làm kẹt cuộn cảm ứng; tự động cuộn xuống nội dung bài khi chọn bài mới.
+    - Bài tập Sắp xếp câu (Scramble) trong Mục 3: chuyển sang Event Delegation trên `pool` và `slot`, hỗ trợ cảm ứng `touch-action: manipulation`, sửa triệt để xung đột sự kiện tile không nhận diện trên mobile.
+    - Bộ câu hỏi Trắc nghiệm & Điền từ (Cloze/MC) chuyển thành 1 cột trên màn hình điện thoại (<= 640px) với kích thước nút bấm chuẩn ngón tay (touch target 48px+).
+  - **Hệ thống Responsive Toàn Diện Đạt Chuẩn Cao Cấp (Không Thanh Cuộn Ngang / Zero Horizontal Scrollbar):**
+    - **Triệt tiêu 100% thanh ngang:** Thiết lập `html, body { overflow-x: hidden !important; max-width: 100vw !important; }`, `*, *::before, *::after { box-sizing: border-box; }`, cùng `max-width: 100%` cho toàn bộ các view và container chính.
+    - **iPhone 15 Pro (Viewport 393px × 852px):**
+      - Header 2 tầng tiện lợi: Tầng 1 (Logo + Theme + Streak), Tầng 2 (8 Nav tabs cuộn ngang mượt mà với cảm ứng đà `-webkit-overflow-scrolling: touch`, ẩn thanh cuộn).
+      - Flashcard 3D: Chuyển cụm nút thao tác thành 2 hàng chuẩn chỉnh (Hàng 1: 3 nút đánh giá Chưa nhớ / Lật thẻ / Đã thuộc chia 3 cột đều; Hàng 2: Thẻ trước / Thẻ sau chia đôi). Ẩn phím tắt desktop trên màn hình cảm ứng.
+      - Canvas vẽ chữ Hán & Bộ Thủ (`#radicals`): Khung Mễ Tự Cách co giãn linh hoạt `min(340px, 100%)` với tỉ lệ `aspect-ratio: 1`, nét vẽ căn chỉnh tọa độ chính xác qua scale tỉ lệ DOM, lưới bộ thủ/nét bút tự động chuyển 1 cột.
+      - Tra cứu từ vựng (`#vocab`) & Pinyin (`#pinyin`): Thanh công cụ sắp xếp dọc tinh tế, thanh chọn subtab Pinyin trượt ngang, bộ lọc cấp độ tự dàn đều; máy ghép âm (Syllable Lab) xếp dọc 1 cột dễ chọn.
+      - Sổ tay ngữ pháp (`#grammar`) & Đấu trường Quiz (`#quiz`): Công thức dài tự ngắt từ (`word-break: break-word; overflow-wrap: break-word`), các nút chọn trắc nghiệm và chữ Hán co giãn linh hoạt bằng hàm `clamp()`.
+      - Modal bút thuận HanziWriter: Tự co giãn theo màn hình nhỏ dưới 500px, cụm nút bấm chia 3 cột vừa khít.
+    - **iPad & Tablets (768px – 1024px):**
+      - Hệ thống lưới chuyển mượt mà sang 2 cột cho kho từ vựng, bài học, bộ thủ, 32 tuần lộ trình, và 3 cột cho Ghép nối (Speed Match).
+      - Thanh chọn cấp độ HSK 1-3 và các review subtab dàn đều không bị vỡ hàng.
+    - **PC & Màn Hình Lớn (>= 1025px):**
+      - Bố cục 3-4 cột rộng rãi thoáng đãng, sidebar bài học ghim cố định bên trái (sticky `top: 80px`), hiệu ứng hover, phím tắt nhanh và thanh điều hướng 1 hàng sang trọng.
 - Khi bổ sung tính năng mới cho bài học, luôn kiểm tra hàm `renderInnerContent` trong [src/views/lessonsView.js](file:///d:/AI/chinese_learning/src/views/lessonsView.js) để đảm bảo tương thích đồng thời cả 3 cấp độ `HSK1_LESSONS`, `HSK2_LESSONS`, `HSK3_LESSONS`.
 - Utility phát âm nằm ở [src/utils/speech.js](file:///d:/AI/chinese_learning/src/utils/speech.js) (dùng `speakChinese(text)` và `playSound('click'|'correct'|'wrong')`).
 - HanziWriter được nạp từ CDN ở file `index.html` hoặc import qua modal [src/components/strokeModal.js](file:///d:/AI/chinese_learning/src/components/strokeModal.js).
+
