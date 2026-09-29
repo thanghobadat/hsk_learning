@@ -1,5 +1,6 @@
 import { HSK_VOCABULARY } from '../data/hskData.js';
 import { speakChinese, playSound } from '../utils/speech.js';
+import { getRadicalsForWord } from '../data/radicalDict.js';
 
 export function renderFlashcardView(container) {
   let currentLevel = '1';
@@ -144,6 +145,7 @@ export function renderFlashcardView(container) {
     }
 
     const item = deck[currentIndex];
+    const radicals = getRadicalsForWord(item.hanzi);
     cardCounter.textContent = `Thẻ ${currentIndex + 1} / ${deck.length}`;
     statMastered.textContent = masteredCount;
     statReview.textContent = reviewCount;
@@ -190,6 +192,24 @@ export function renderFlashcardView(container) {
               <span class="label">Nghĩa:</span>
               <strong>${item.meaning}</strong>
             </div>
+
+            ${radicals.length > 0 ? `
+              <div class="flashcard-radicals-box">
+                <span class="fc-radicals-tag">🧩 Bộ thủ cấu thành:</span>
+                <div class="fc-radicals-list">
+                  ${radicals.map(r => `
+                    <div class="fc-radical-item" title="Chữ ${r.forChar} có bộ ${r.char} (${r.radicalName}) - ${r.meaning}">
+                      <span class="fc-rad-char">${r.forChar}</span>
+                      <span class="fc-rad-arrow">➔</span>
+                      <span class="fc-rad-sym">${r.char}</span>
+                      <strong class="fc-rad-name">${r.radicalName}</strong>
+                      ${r.pinyin ? `<span class="fc-rad-py">(${r.pinyin})</span>` : ''}: 
+                      <span class="fc-rad-desc">${r.meaning}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
 
             <div class="back-example-box">
               <div class="ex-zh">${item.exampleZh}</div>

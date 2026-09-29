@@ -1,7 +1,7 @@
 # 🧠 Project Memory: HSK 3.0 Master
 
 > **Phiên bản:** HSK 3.0 Master (Sơ Cấp: HSK 1 - HSK 2 - HSK 3)  
-> **Cập nhật lần cuối:** 27/09/2026  
+> **Cập nhật lần cuối:** 29/09/2026  
 > **Mục đích file:** Tóm tắt nhanh toàn bộ kiến trúc, dữ liệu, tính năng và trạng thái hiện tại của dự án để tiếp tục phát triển bất kỳ lúc nào mà không cần rà soát lại toàn bộ mã nguồn.
 
 ---
@@ -88,11 +88,13 @@ chinese_learning/
 ├── Memory.md                    # File bộ nhớ này
 ├── scripts/
 │   ├── build_hsk2_full_dataset.mjs  # Generator sinh 25 bài HSK 2 (775 từ, mẹo nhớ, ngữ pháp)
-│   └── build_hsk3_full_dataset.mjs  # Generator sinh 30 bài HSK 3 (960 từ, mẹo nhớ, ngữ pháp)
+│   ├── build_hsk3_full_dataset.mjs  # Generator sinh 30 bài HSK 3 (960 từ, mẹo nhớ, ngữ pháp)
+│   └── build_radical_dict.mjs       # Generator cơ sở dữ liệu tra cứu bộ thủ toàn diện
 ├── src/
 │   ├── main.js                  # Điều phối SPA routing, theme, streak counter
 │   ├── style.css                # Design system hoàn chỉnh (CSS tokens, components, responsive)
 │   ├── data/
+│   │   ├── radicalDict.js       # Từ điển bộ thủ 214 Khang Hy & ánh xạ 1.016 chữ Hán chuẩn xác
 │   │   ├── hsk1LessonsData.js   # 20 bài HSK 1 (500 từ có mẹo nhớ, 48 ngữ pháp)
 │   │   ├── hsk2LessonsData.js   # 25 bài HSK 2 (775 từ có mẹo nhớ, 81 ngữ pháp)
 │   │   ├── hsk3LessonsData.js   # 30 bài HSK 3 (960 từ có mẹo nhớ, 81 ngữ pháp)
@@ -178,6 +180,16 @@ chinese_learning/
       - Thanh chọn cấp độ HSK 1-3 và các review subtab dàn đều không bị vỡ hàng.
     - **PC & Màn Hình Lớn (>= 1025px):**
       - Bố cục 3-4 cột rộng rãi thoáng đãng, sidebar bài học ghim cố định bên trái (sticky `top: 80px`), hiệu ứng hover, phím tắt nhanh và thanh điều hướng 1 hàng sang trọng.
+- **Cập nhật 29/09/2026 (Hệ Thống Phân Tích & Hiển Thị Bộ Thủ Toàn Diện Cho Toàn Bộ Từ Vựng):**
+  - **Dữ liệu & Thuật toán tra cứu chuẩn xác:**
+    - Xây dựng [src/data/radicalDict.js](file:///d:/AI/chinese_learning/src/data/radicalDict.js) chuẩn hóa 214 Bộ Thủ Khang Hy (kèm biến thể thông dụng) với thông tin Pinyin, âm Hán-Việt, phân loại và giải nghĩa súc tích.
+    - Ánh xạ 100% (1.016 / 1.016) chữ Hán độc nhất trong toàn bộ 75 bài học HSK 1, 2, 3 và kho từ vựng tổng hợp.
+    - Thuật toán `getRadicalsForWord(hanzi)` tự động phân tích và bóc tách từng chữ cấu thành (ví dụ `你好` ➔ `你` [bộ `亻` Nhân đứng] + `好` [bộ `女` Nữ]; `吃` ➔ `口` Khẩu).
+  - **Tích hợp đồng bộ trên 4 phân hệ lớn:**
+    - **Tab 1 Bài học (`#lessons`):** Mỗi thẻ từ vựng hiển thị cụm `word-radicals-box` với các pill kính mờ tinh tế phân tích từng chữ.
+    - **Kho từ vựng (`#vocab`):** Bổ sung **Bộ Lọc Bộ Thủ** (`🧩 Bộ thủ`) dropdown tự động lọc từ theo bộ thủ xuất hiện nhiều nhất; mở rộng thanh tìm kiếm cho phép tra cứu bằng ký hiệu hoặc tên tiếng Việt của bộ thủ.
+    - **Trung tâm Flashcard 3D (`#flashcard` & Ôn tập bài học):** Mặt sau thẻ hiển thị danh sách chi tiết các bộ thủ cấu thành.
+    - **Modal Bút thuận & Tập viết (`strokeModal.js`):** Khi chuyển qua lại giữa các chữ trong từ ghép để tập viết, banner tự động cập nhật bộ thủ của chữ đang thao tác.
 - Khi bổ sung tính năng mới cho bài học, luôn kiểm tra hàm `renderInnerContent` trong [src/views/lessonsView.js](file:///d:/AI/chinese_learning/src/views/lessonsView.js) để đảm bảo tương thích đồng thời cả 3 cấp độ `HSK1_LESSONS`, `HSK2_LESSONS`, `HSK3_LESSONS`.
 - Utility phát âm nằm ở [src/utils/speech.js](file:///d:/AI/chinese_learning/src/utils/speech.js) (dùng `speakChinese(text)` và `playSound('click'|'correct'|'wrong')`).
 - HanziWriter được nạp từ CDN ở file `index.html` hoặc import qua modal [src/components/strokeModal.js](file:///d:/AI/chinese_learning/src/components/strokeModal.js).

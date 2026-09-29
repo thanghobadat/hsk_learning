@@ -1,11 +1,13 @@
 import { HSK_VOCABULARY } from '../data/hskData.js';
 import { speakChinese, playSound, setSpeechRate, getSpeechRate } from '../utils/speech.js';
 import { openStrokeModal } from '../components/strokeModal.js';
+import { getRadicalsForWord, getAllAvailableRadicals, wordContainsRadical } from '../data/radicalDict.js';
 
 export function renderVocabView(container) {
   let activeLevel = 'all'; // 'all', '1', '2', '3', 'fav'
   let searchQuery = '';
   let activeCategory = 'all';
+  let activeRadical = 'all';
 
   function getFavorites() {
     return JSON.parse(localStorage.getItem('hsk_favorites') || '[]');
@@ -25,6 +27,7 @@ export function renderVocabView(container) {
 
   // Lấy danh sách danh mục duy nhất
   const categories = ['all', ...new Set(HSK_VOCABULARY.map(v => v.category))];
+  const availableRadicals = getAllAvailableRadicals().slice(0, 40);
 
   container.innerHTML = `
     <div class="vocab-page animate-fade-in">
@@ -69,15 +72,27 @@ export function renderVocabView(container) {
             </button>
           </div>
 
-          <!-- Category Filter -->
-          <div class="category-filter-wrap">
-            <label for="catSelect">Chủ đề:</label>
-            <select id="catSelect" class="custom-select-sm">
-              <option value="all">Tất cả chủ đề</option>
-              ${categories.filter(c => c !== 'all').map(c => `
-                <option value="${c}">${c}</option>
-              `).join('')}
-            </select>
+          <!-- Filter Group: Chủ đề & Bộ thủ -->
+          <div class="toolbar-filters-group">
+            <div class="category-filter-wrap">
+              <label for="catSelect">Chủ đề:</label>
+              <select id="catSelect" class="custom-select-sm">
+                <option value="all">Tất cả chủ đề</option>
+                ${categories.filter(c => c !== 'all').map(c => `
+                  <option value="${c}">${c}</option>
+                `).join('')}
+              </select>
+            </div>
+
+            <div class="radical-filter-wrap">
+              <label for="radicalSelect">🧩 Bộ thủ:</label>
+              <select id="radicalSelect" class="custom-select-sm">
+                <option value="all">Tất cả bộ thủ</option>
+                ${availableRadicals.map(r => `
+                  <option value="${r.char}">${r.char} (${r.hanViet}) - ${r.count} chữ</option>
+                `).join('')}
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -99,6 +114,7 @@ export function renderVocabView(container) {
   const btnClearSearch = container.querySelector('#btnClearSearch');
   const levelBtns = container.querySelectorAll('.level-tab-btn');
   const catSelect = container.querySelector('#catSelect');
+  const radicalSelect = container.querySelector('#radicalSelect');
   const wordGrid = container.querySelector('#wordGrid');
   const resultCount = container.querySelector('#resultCount');
   const favCount = container.querySelector('#favCount');
@@ -128,13 +144,24 @@ export function renderVocabView(container) {
         if (item.category !== activeCategory) return false;
       }
 
+      // Radical check
+      if (activeRadical !== 'all') {
+        if (!wordContainsRadical(item.hanzi, activeRadical)) return false;
+      }
+
       // Search query check
       if (q) {
         const matchHanzi = item.hanzi.toLowerCase().includes(q);
         const matchPinyin = item.pinyin.toLowerCase().includes(q);
-        const matchHanViet = item.hanViet.toLowerCase().includes(q);
+        const matchHanViet = (item.hanViet || '').toLowerCase().includes(q);
         const matchMeaning = item.meaning.toLowerCase().includes(q);
-        return matchHanzi || matchPinyin || matchHanViet || matchMeaning;
+        const radicals = getRadicalsForWord(item.hanzi);
+        const matchRadical = radicals.some(r => 
+          r.char === q || 
+          r.radicalName.toLowerCase().includes(q) || 
+          r.meaning.toLowerCase().includes(q)
+        );
+        return matchHanzi || matchPinyin || matchHanViet || matchMeaning || matchRadical;
       }
 
       return true;
@@ -157,6 +184,7 @@ export function renderVocabView(container) {
       const isFav = favs.includes(w.id);
       const levelColors = { 1: '#10b981', 2: '#3b82f6', 3: '#8b5cf6' };
       const lvlColor = levelColors[w.level] || '#64748b';
+      const radicals = getRadicalsForWord(w.hanzi);
 
       return `
         <div class="word-card glass-panel" data-word-id="${w.id}">
@@ -199,6 +227,26 @@ export function renderVocabView(container) {
             <span class="meaning-label">Nghĩa:</span>
             <span class="meaning-val">${w.meaning}</span>
           </div>
+
+          ${radicals.length > 0 ? `
+            <div class="word-radicals-box">
+              <div class="radicals-header">
+                <span class="radicals-tag">🧩 Bộ thủ:</span>
+              </div>
+              <div class="radicals-pills-list">
+                ${radicals.map(r => `
+                  <div class="radical-pill" title="Chữ ${r.forChar}: Bộ ${r.char} (${r.radicalName}) - ${r.meaning}">
+                    <span class="rad-pill-char">${r.forChar}</span>
+                    <span class="rad-pill-arrow">➔</span>
+                    <span class="rad-pill-symbol">${r.char}</span>
+                    <span class="rad-pill-name">${r.radicalName}</span>
+                    ${r.pinyin ? `<span class="rad-pill-pinyin">(${r.pinyin})</span>` : ''}
+                    <span class="rad-pill-meaning">: ${r.meaning}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
 
           <div class="word-example-box">
             <div class="example-header">
@@ -286,6 +334,13 @@ export function renderVocabView(container) {
   catSelect.addEventListener('change', (e) => {
     playSound('click');
     activeCategory = e.target.value;
+    renderWordList();
+  });
+
+  // Sự kiện chọn bộ thủ
+  radicalSelect?.addEventListener('change', (e) => {
+    playSound('click');
+    activeRadical = e.target.value;
     renderWordList();
   });
 

@@ -1,5 +1,6 @@
 import { playSound, speakChinese } from '../utils/speech.js';
 import { openStrokeModal } from './strokeModal.js';
+import { getRadicalsForWord } from '../data/radicalDict.js';
 
 export function renderLessonFlashcard(container, lesson) {
   const storageKey = `hsk_lesson_${lesson.id}_learned_cards`;
@@ -26,6 +27,7 @@ export function renderLessonFlashcard(container, lesson) {
     const currentWord = cards[currentIndex];
     const isLearned = learnedHanzi.has(currentWord.hanzi);
     const progressPercent = Math.round(((currentIndex + 1) / cards.length) * 100);
+    const radicals = getRadicalsForWord(currentWord.hanzi);
 
     container.innerHTML = `
       <div class="lesson-flashcard-wrapper animate-fade-in">
@@ -87,6 +89,24 @@ export function renderLessonFlashcard(container, lesson) {
               <div class="lfc-back-meaning">
                 ${currentWord.meaning}
               </div>
+
+              ${radicals.length > 0 ? `
+                <div class="lfc-back-radicals">
+                  <span class="lfc-radicals-tag">🧩 Bộ thủ cấu thành:</span>
+                  <div class="lfc-radicals-list">
+                    ${radicals.map(r => `
+                      <div class="lfc-radical-badge" title="Chữ ${r.forChar} có bộ ${r.char} (${r.radicalName}) - ${r.meaning}">
+                        <span class="lfc-rad-char">${r.forChar}</span>
+                        <span class="lfc-rad-arr">➔</span>
+                        <span class="lfc-rad-sym">${r.char}</span>
+                        <strong class="lfc-rad-name">${r.radicalName}</strong>
+                        ${r.pinyin ? `<span class="lfc-rad-py">(${r.pinyin})</span>` : ''}: 
+                        <span class="lfc-rad-desc">${r.meaning}</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
 
               ${currentWord.mnemonic ? `
                 <div class="lfc-back-mnemonic">

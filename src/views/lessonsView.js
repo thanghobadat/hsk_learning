@@ -6,6 +6,7 @@ import { openStrokeModal } from '../components/strokeModal.js';
 import { renderLessonFlashcard } from '../components/lessonFlashcard.js';
 import { renderLessonReflex } from '../components/lessonReflex.js';
 import { renderLessonAIDrills } from '../components/lessonAIDrills.js';
+import { getRadicalsForWord } from '../data/radicalDict.js';
 
 // Cấu hình 3 cấp độ chuẩn HSK 3.0
 const HSK_LEVELS = {
@@ -313,7 +314,9 @@ export function renderLessonsView(container) {
     if (activeInnerTab === 'vocab') {
       contentEl.innerHTML = `
         <div class="lesson-words-grid animate-fade-in">
-          ${lesson.words.map((w, idx) => `
+          ${lesson.words.map((w, idx) => {
+            const radicals = getRadicalsForWord(w.hanzi);
+            return `
             <div class="word-card glass-panel">
               <div class="word-card-header">
                 <span class="rule-num-badge">${idx + 1}</span>
@@ -348,6 +351,26 @@ export function renderLessonsView(container) {
                 <span class="meaning-val">${w.meaning}</span>
               </div>
 
+              ${radicals.length > 0 ? `
+                <div class="word-radicals-box">
+                  <div class="radicals-header">
+                    <span class="radicals-tag">🧩 Bộ thủ cấu thành:</span>
+                  </div>
+                  <div class="radicals-pills-list">
+                    ${radicals.map(r => `
+                      <div class="radical-pill" title="Chữ ${r.forChar}: Bộ ${r.char} (${r.radicalName}) - ${r.meaning}">
+                        <span class="rad-pill-char">${r.forChar}</span>
+                        <span class="rad-pill-arrow">➔</span>
+                        <span class="rad-pill-symbol">${r.char}</span>
+                        <span class="rad-pill-name">${r.radicalName}</span>
+                        ${r.pinyin ? `<span class="rad-pill-pinyin">(${r.pinyin})</span>` : ''}
+                        <span class="rad-pill-meaning">: ${r.meaning}</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+
               ${w.mnemonic ? `
                 <div class="word-mnemonic-box">
                   <div class="mnemonic-header">
@@ -367,7 +390,8 @@ export function renderLessonsView(container) {
                 <div class="example-vi">${w.exampleVi}</div>
               </div>
             </div>
-          `).join('')}
+          `;
+          }).join('')}
         </div>
       `;
     } else if (activeInnerTab === 'grammar') {

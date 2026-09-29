@@ -1908,6 +1908,336 @@ body {
   font-weight: 700;
 }
 
+/* --- VOCABULARY RADICALS (BỘ THỦ CẤU THÀNH) --- */
+.word-radicals-box {
+  background: rgba(56, 189, 248, 0.05);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+[data-theme="light"] .word-radicals-box {
+  background: rgba(2, 132, 199, 0.05);
+  border-color: rgba(2, 132, 199, 0.2);
+}
+
+.radicals-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.radicals-tag {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+[data-theme="light"] .radicals-tag {
+  color: #0284c7;
+}
+
+.radicals-pills-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.radical-pill {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.4rem;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  transition: var(--transition);
+}
+
+[data-theme="light"] .radical-pill {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.radical-pill:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.08);
+  transform: translateY(-1px);
+}
+
+.rad-pill-char {
+  font-family: var(--font-chinese);
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.rad-pill-arrow {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.rad-pill-symbol {
+  font-family: var(--font-chinese);
+  font-size: 1rem;
+  font-weight: 900;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  padding: 0 4px;
+  border-radius: 4px;
+}
+
+[data-theme="light"] .rad-pill-symbol {
+  color: #0284c7;
+  background: rgba(2, 132, 199, 0.1);
+}
+
+.rad-pill-name {
+  font-weight: 700;
+  color: var(--gold-500);
+}
+
+.rad-pill-pinyin {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-family: var(--font-sans);
+}
+
+.rad-pill-meaning {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  word-break: break-word;
+}
+
+/* Toolbar Filters Group in Vocab */
+.toolbar-filters-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .toolbar-filters-group {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+}
+
+.radical-filter-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 640px) {
+  .radical-filter-wrap {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .radical-filter-wrap select {
+    flex: 1;
+    max-width: none;
+  }
+}
+
+/* Stroke Modal Radical Banner */
+.stroke-char-radical-banner {
+  margin: 0.35rem 0 0.5rem 0;
+}
+
+.stroke-rad-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.8rem;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .stroke-rad-badge {
+  background: rgba(2, 132, 199, 0.08);
+  border-color: rgba(2, 132, 199, 0.25);
+}
+
+.stroke-rad-icon {
+  font-size: 0.9rem;
+}
+
+.stroke-rad-badge strong {
+  color: #38bdf8;
+}
+
+[data-theme="light"] .stroke-rad-badge strong {
+  color: #0284c7;
+}
+
+.stroke-rad-sep {
+  color: var(--text-muted);
+}
+
+.stroke-rad-desc {
+  color: var(--text-secondary);
+}
+
+/* Lesson Flashcard Back Radicals */
+.lfc-back-radicals {
+  background: rgba(56, 189, 248, 0.06);
+  border: 1px dashed rgba(56, 189, 248, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  text-align: left;
+}
+
+[data-theme="light"] .lfc-back-radicals {
+  background: rgba(2, 132, 199, 0.06);
+  border-color: rgba(2, 132, 199, 0.3);
+}
+
+.lfc-radicals-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #38bdf8;
+  display: block;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+}
+
+[data-theme="light"] .lfc-radicals-tag {
+  color: #0284c7;
+}
+
+.lfc-radicals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.lfc-radical-badge {
+  color: var(--text-secondary);
+  line-height: 1.4;
+  font-size: 0.78rem;
+}
+
+.lfc-rad-char {
+  font-family: var(--font-chinese);
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.lfc-rad-arr {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.lfc-rad-sym {
+  font-family: var(--font-chinese);
+  color: #38bdf8;
+  font-weight: 800;
+}
+
+.lfc-rad-name {
+  color: var(--gold-500);
+}
+
+.lfc-rad-py {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.lfc-rad-desc {
+  color: var(--text-muted);
+}
+
+/* Full Flashcard Center Radicals */
+.flashcard-radicals-box {
+  background: rgba(56, 189, 248, 0.06);
+  border: 1px dashed rgba(56, 189, 248, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.8rem;
+  margin: 0.5rem 0;
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+[data-theme="light"] .flashcard-radicals-box {
+  background: rgba(2, 132, 199, 0.06);
+  border-color: rgba(2, 132, 199, 0.3);
+}
+
+.fc-radicals-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #38bdf8;
+  display: block;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+}
+
+[data-theme="light"] .fc-radicals-tag {
+  color: #0284c7;
+}
+
+.fc-radicals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.fc-radical-item {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.fc-rad-char {
+  font-family: var(--font-chinese);
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.fc-rad-arrow {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.fc-rad-sym {
+  font-family: var(--font-chinese);
+  color: #38bdf8;
+  font-weight: 800;
+}
+
+.fc-rad-name {
+  color: var(--gold-500);
+}
+
+.fc-rad-py {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.fc-rad-desc {
+  color: var(--text-muted);
+}
+
 .word-example-box {
   background: rgba(0, 0, 0, 0.2);
   border-radius: var(--radius-sm);

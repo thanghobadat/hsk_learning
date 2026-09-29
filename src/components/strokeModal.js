@@ -1,6 +1,7 @@
 // Component Modal Hướng Dẫn Bút Thuận & Luyện Viết Từng Nét Chữ Hán
 import HanziWriter from 'hanzi-writer';
 import { speakChinese, playSound } from '../utils/speech.js';
+import { getRadicalsForWord } from '../data/radicalDict.js';
 
 let modalElement = null;
 let currentWriter = null;
@@ -51,6 +52,11 @@ function ensureModalContainer() {
 
       <!-- Thanh chọn chữ cái nếu là từ ghép -->
       <div class="stroke-char-selector" id="strokeCharSelector">
+        <!-- Render dynamically -->
+      </div>
+
+      <!-- Banner thông tin bộ thủ của chữ đang chọn -->
+      <div class="stroke-char-radical-banner" id="strokeCharRadicalBanner">
         <!-- Render dynamically -->
       </div>
 
@@ -276,6 +282,26 @@ function selectCharacter(index) {
   // Ẩn nút next char
   const nextWrap = modalElement.querySelector('#strokeNextWrap');
   nextWrap.classList.add('hidden');
+
+  // Cập nhật thông tin bộ thủ của chữ đang chọn
+  const radList = getRadicalsForWord(char);
+  const radBanner = modalElement.querySelector('#strokeCharRadicalBanner');
+  if (radBanner) {
+    if (radList && radList.length > 0) {
+      const r = radList[0];
+      radBanner.innerHTML = `
+        <span class="stroke-rad-badge">
+          <span class="stroke-rad-icon">🧩</span>
+          <span>Chữ <strong>${char}</strong>: Bộ <strong>${r.char}</strong> (${r.radicalName} - ${r.pinyin})</span>
+          <span class="stroke-rad-sep">•</span>
+          <span class="stroke-rad-desc">${r.meaning}</span>
+        </span>
+      `;
+      radBanner.classList.remove('hidden');
+    } else {
+      radBanner.classList.add('hidden');
+    }
+  }
 
   loadCharacter(char);
 }
