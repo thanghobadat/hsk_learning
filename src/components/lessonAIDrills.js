@@ -1,43 +1,122 @@
 import { playSound, speakChinese } from '../utils/speech.js';
-import { generateLocalDrills, explainWithAI, getAIConfig, saveAIConfig } from '../utils/aiService.js';
+import { generateLocalDrills, explainWithAI, gradeWritingWithAI, getAIConfig, saveAIConfig } from '../utils/aiService.js';
 
 export function renderLessonAIDrills(container, lesson) {
-  let drills = generateLocalDrills(lesson);
+  // Lấy cấu hình đã lưu từ localStorage hoặc mặc định
+  let selectedTypes = ['scramble', 'cloze', 'multiple-choice', 'vi_to_zh', 'pinyin_to_vi'];
+  try {
+    const savedTypes = localStorage.getItem('hsk_drill_selected_types');
+    if (savedTypes) {
+      const parsed = JSON.parse(savedTypes);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        selectedTypes = parsed;
+      }
+    }
+  } catch (e) {}
+
+  let wordsPerGrammar = 2;
+  try {
+    const savedWpg = localStorage.getItem('hsk_drill_words_per_grammar');
+    if (savedWpg) {
+      const parsedWpg = parseInt(savedWpg, 10);
+      if (parsedWpg > 0) wordsPerGrammar = parsedWpg;
+    }
+  } catch (e) {}
+
+  let drills = generateLocalDrills(lesson, { selectedTypes, wordsPerGrammar });
 
   function render() {
+    const grammarCount = Math.max(1, (lesson.grammarPoints || []).length);
+    const formulaStr = `${selectedTypes.length} dạng × ${grammarCount} ngữ pháp × ${wordsPerGrammar} từ = ${drills.length} câu`;
+    const isAllSelected = selectedTypes.length === 5;
+
     container.innerHTML = `
       <div class="lesson-ai-drills-wrapper animate-fade-in">
-        <!-- AI Toolbar -->
-        <div class="ai-toolbar glass-panel">
-          <div class="ai-toolbar-info">
-            <span class="ai-badge-pulse">🤖 AI Smart Drills</span>
-            <span class="ai-desc-text">Bài tập tự động sinh dựa trên 25 từ & 2 điểm ngữ pháp Bài ${lesson.number}</span>
+        <!-- AI Filter Toolbar with Checkboxes -->
+        <div class="ai-filter-toolbar glass-panel">
+          <div class="filter-header-row">
+            <span class="filter-title">🎯 Chọn Dạng Bài Tập:</span>
+            <span class="drills-total-badge" id="drillsTotalCount">Bộ đề: ${drills.length} Câu</span>
           </div>
 
-          <div class="ai-toolbar-actions">
-            <button class="btn-ai-action" id="btnRegenerateDrills" title="Tự động sinh bộ đề bài tập mới">
-              🎲 Tạo Bộ Đề Mới
-            </button>
-            <button class="btn-ai-action secondary" id="btnOpenAIConfig" title="Cài đặt API Key Gemini / OpenAI">
-              ⚙️ Cấu Hình AI
-            </button>
+          <!-- Checkboxes Grid -->
+          <div class="drill-checkboxes-grid">
+            <label class="btn-filter-pill ${isAllSelected ? 'active' : ''}">
+              <input type="checkbox" id="chkAllDrills" ${isAllSelected ? 'checked' : ''}>
+              <span>🌟 Tất Cả (5 Dạng)</span>
+            </label>
+            <label class="btn-filter-pill ${selectedTypes.includes('scramble') ? 'active' : ''}">
+              <input type="checkbox" class="chk-drill-type" data-type="scramble" ${selectedTypes.includes('scramble') ? 'checked' : ''}>
+              <span>🧩 Sắp Xếp Câu</span>
+            </label>
+            <label class="btn-filter-pill ${selectedTypes.includes('cloze') ? 'active' : ''}">
+              <input type="checkbox" class="chk-drill-type" data-type="cloze" ${selectedTypes.includes('cloze') ? 'checked' : ''}>
+              <span>✏️ Điền Từ</span>
+            </label>
+            <label class="btn-filter-pill ${selectedTypes.includes('multiple-choice') ? 'active' : ''}">
+              <input type="checkbox" class="chk-drill-type" data-type="multiple-choice" ${selectedTypes.includes('multiple-choice') ? 'checked' : ''}>
+              <span>🎯 Trắc Nghiệm</span>
+            </label>
+            <label class="btn-filter-pill ${selectedTypes.includes('vi_to_zh') ? 'active' : ''}">
+              <input type="checkbox" class="chk-drill-type" data-type="vi_to_zh" ${selectedTypes.includes('vi_to_zh') ? 'checked' : ''}>
+              <span>✍️ Dịch Việt ➔ Trung (AI)</span>
+            </label>
+            <label class="btn-filter-pill ${selectedTypes.includes('pinyin_to_vi') ? 'active' : ''}">
+              <input type="checkbox" class="chk-drill-type" data-type="pinyin_to_vi" ${selectedTypes.includes('pinyin_to_vi') ? 'checked' : ''}>
+              <span>🎧 Nghe Pinyin ➔ Việt (AI)</span>
+            </label>
+          </div>
+
+          <!-- Config & Actions Row -->
+          <div class="filter-config-row">
+            <div class="formula-info-text">
+              <span>📐</span> ${formulaStr}
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-left: auto;">
+              <div class="words-per-grammar-wrap">
+                <span>Số từ/mẫu:</span>
+                <select class="words-per-grammar-select" id="selectWordsPerGrammar">
+                  <option value="2" ${wordsPerGrammar === 2 ? 'selected' : ''}>2 câu / mẫu</option>
+                  <option value="4" ${wordsPerGrammar === 4 ? 'selected' : ''}>4 câu / mẫu</option>
+                  <option value="5" ${wordsPerGrammar === 5 ? 'selected' : ''}>5 câu / mẫu</option>
+                  <option value="8" ${wordsPerGrammar === 8 ? 'selected' : ''}>8 câu / mẫu</option>
+                  <option value="10" ${wordsPerGrammar === 10 ? 'selected' : ''}>10 câu / mẫu</option>
+                </select>
+              </div>
+
+              <button class="btn-ai-action" id="btnRegenerateDrills" title="Tự động sinh bộ đề bài tập mới không trùng lặp">
+                🎲 Tạo Bộ Đề Mới
+              </button>
+              <button class="btn-ai-action secondary" id="btnOpenAIConfig" title="Cài đặt API Key Gemini">
+                ⚙️ Cấu Hình AI
+              </button>
+            </div>
           </div>
         </div>
 
         <!-- Drills List -->
         <div class="ai-drills-list" id="aiDrillsList">
-          ${drills.map((drill, dIdx) => renderDrillItem(drill, dIdx)).join('')}
+          ${drills.length > 0 
+            ? drills.map((drill, dIdx) => renderDrillItem(drill, dIdx)).join('')
+            : `<div class="glass-panel" style="padding: 2.5rem; text-align: center; color: var(--text-muted);">
+                Vui lòng chọn ít nhất 1 dạng bài tập ở bộ lọc phía trên để bắt đầu luyện tập!
+              </div>`
+          }
         </div>
 
-        <!-- AI Deep Explanation Modal Container -->
+        <!-- AI Deep Explanation Modal Container (Portal) -->
         <div id="aiModalContainer"></div>
       </div>
     `;
 
+    // Gắn sự kiện Checkbox filter
+    attachFilterEvents();
+
     // Gắn sự kiện nút Tạo đề mới
     container.querySelector('#btnRegenerateDrills')?.addEventListener('click', () => {
       playSound('click');
-      drills = generateLocalDrills(lesson);
+      drills = generateLocalDrills(lesson, { selectedTypes, wordsPerGrammar });
       render();
     });
 
@@ -47,20 +126,65 @@ export function renderLessonAIDrills(container, lesson) {
       openAIConfigModal(container);
     });
 
-    // Gắn sự kiện cho từng loại bài tập
+    // Gắn sự kiện cho từng loại bài tập (Kiểm tra & biết ngay kết quả)
     attachDrillEvents(container, drills, lesson);
+  }
+
+  function attachFilterEvents() {
+    const allChk = container.querySelector('#chkAllDrills');
+    const typeChks = container.querySelectorAll('.chk-drill-type');
+    const wpgSelect = container.querySelector('#selectWordsPerGrammar');
+
+    allChk?.addEventListener('change', () => {
+      playSound('click');
+      if (allChk.checked) {
+        selectedTypes = ['scramble', 'cloze', 'multiple-choice', 'vi_to_zh', 'pinyin_to_vi'];
+      } else {
+        selectedTypes = ['scramble']; // Giữ ít nhất 1 dạng
+      }
+      localStorage.setItem('hsk_drill_selected_types', JSON.stringify(selectedTypes));
+      drills = generateLocalDrills(lesson, { selectedTypes, wordsPerGrammar });
+      render();
+    });
+
+    typeChks.forEach(chk => {
+      chk.addEventListener('change', () => {
+        playSound('click');
+        const type = chk.dataset.type;
+        if (chk.checked) {
+          if (!selectedTypes.includes(type)) selectedTypes.push(type);
+        } else {
+          selectedTypes = selectedTypes.filter(t => t !== type);
+          if (selectedTypes.length === 0) {
+            selectedTypes = [type]; // Giữ lại ít nhất 1 dạng
+          }
+        }
+        localStorage.setItem('hsk_drill_selected_types', JSON.stringify(selectedTypes));
+        drills = generateLocalDrills(lesson, { selectedTypes, wordsPerGrammar });
+        render();
+      });
+    });
+
+    wpgSelect?.addEventListener('change', (e) => {
+      playSound('click');
+      wordsPerGrammar = parseInt(e.target.value, 10) || 2;
+      localStorage.setItem('hsk_drill_words_per_grammar', wordsPerGrammar);
+      drills = generateLocalDrills(lesson, { selectedTypes, wordsPerGrammar });
+      render();
+    });
   }
 
   render();
 }
 
 /**
- * Render từng câu hỏi bài tập
+ * Render từng câu hỏi theo 5 dạng bài tập
  */
 function renderDrillItem(drill, idx) {
+  // DẠNG 1: SẮP XẾP KHỐI THÀNH CÂU
   if (drill.type === 'scramble') {
     return `
-      <div class="drill-card glass-panel" data-drill-id="${drill.id}" data-drill-idx="${idx}">
+      <div class="drill-card glass-panel animate-fade-in" data-drill-id="${drill.id}" data-drill-idx="${idx}">
         <div class="drill-card-header">
           <span class="drill-type-badge scramble">${drill.badge}</span>
           <span class="drill-num">Câu ${idx + 1}</span>
@@ -68,7 +192,7 @@ function renderDrillItem(drill, idx) {
 
         <div class="drill-prompt-title">${drill.title}</div>
         <div class="drill-hint-formula">💡 ${drill.hintFormula}</div>
-        <div class="drill-meaning-vi">Dịch nghĩa: "<strong>${drill.meaningVi}</strong>"</div>
+        <div class="drill-meaning-vi">Nghĩa tiếng Việt: "<strong>${drill.meaningVi}</strong>"</div>
 
         <!-- Answer Slot Area -->
         <div class="scramble-answer-slot" id="slot-${drill.id}">
@@ -99,9 +223,10 @@ function renderDrillItem(drill, idx) {
     `;
   }
 
+  // DẠNG 2: ĐIỀN TỪ CÒN THIẾU
   if (drill.type === 'cloze') {
     return `
-      <div class="drill-card glass-panel" data-drill-id="${drill.id}" data-drill-idx="${idx}">
+      <div class="drill-card glass-panel animate-fade-in" data-drill-id="${drill.id}" data-drill-idx="${idx}">
         <div class="drill-card-header">
           <span class="drill-type-badge cloze">${drill.badge}</span>
           <span class="drill-num">Câu ${idx + 1}</span>
@@ -128,42 +253,111 @@ function renderDrillItem(drill, idx) {
     `;
   }
 
-  // Dạng multiple choice thông thường
-  return `
-    <div class="drill-card glass-panel" data-drill-id="${drill.id}" data-drill-idx="${idx}">
-      <div class="drill-card-header">
-        <span class="drill-type-badge quiz">${drill.badge}</span>
-        <span class="drill-num">Câu ${idx + 1}</span>
+  // DẠNG 3: TRẮC NGHIỆM NGỮ PHÁP
+  if (drill.type === 'multiple-choice') {
+    return `
+      <div class="drill-card glass-panel animate-fade-in" data-drill-id="${drill.id}" data-drill-idx="${idx}">
+        <div class="drill-card-header">
+          <span class="drill-type-badge quiz">${drill.badge}</span>
+          <span class="drill-num">Câu ${idx + 1}</span>
+        </div>
+
+        <div class="drill-prompt-title" style="font-size: 1.05rem;">${drill.title}</div>
+
+        <div class="drill-choices-grid" style="margin-top: 0.75rem;">
+          ${drill.choices.map((ch, cIdx) => `
+            <button class="btn-drill-choice btn-mc-choice" data-drill-id="${drill.id}" data-choice-idx="${cIdx}">
+              <span class="choice-letter">${['A', 'B', 'C', 'D'][cIdx]}</span>
+              <span>${ch}</span>
+            </button>
+          `).join('')}
+        </div>
+
+        <div class="drill-feedback-panel hidden" id="fb-${drill.id}"></div>
       </div>
+    `;
+  }
 
-      <div class="drill-prompt-title" style="font-size: 1.05rem;">${drill.title}</div>
+  // DẠNG 4: CHO CÂU TIẾNG VIỆT ➔ VIẾT LẠI TIẾNG TRUNG (AI Chấm Điểm)
+  if (drill.type === 'vi_to_zh') {
+    return `
+      <div class="drill-card glass-panel animate-fade-in" data-drill-id="${drill.id}" data-drill-idx="${idx}">
+        <div class="drill-card-header">
+          <span class="drill-type-badge vi-to-zh">${drill.badge}</span>
+          <span class="drill-num">Câu ${idx + 1}</span>
+        </div>
 
-      <div class="drill-choices-grid" style="margin-top: 0.75rem;">
-        ${drill.choices.map((ch, cIdx) => `
-          <button class="btn-drill-choice btn-mc-choice" data-drill-id="${drill.id}" data-choice-idx="${cIdx}">
-            <span class="choice-letter">${['A', 'B', 'C', 'D'][cIdx]}</span>
-            <span>${ch}</span>
+        <div class="drill-prompt-title">${drill.title}</div>
+        <div class="drill-meaning-vi-box">
+          "${drill.meaningVi}"
+        </div>
+        <div class="drill-hint-formula">💡 Cấu trúc gợi ý: ${drill.hintFormula}</div>
+
+        <div class="drill-input-wrapper">
+          <input type="text" class="drill-text-input input-zh" id="inputZh-${drill.id}" placeholder="${drill.samplePlaceholder}" autocomplete="off">
+        </div>
+
+        <div class="scramble-actions">
+          <button class="btn-primary-sm btn-submit-zh" data-drill-id="${drill.id}">
+            🤖 AI Chấm Câu
           </button>
-        `).join('')}
-      </div>
+        </div>
 
-      <div class="drill-feedback-panel hidden" id="fb-${drill.id}"></div>
-    </div>
-  `;
+        <div class="drill-feedback-panel hidden" id="fb-${drill.id}"></div>
+      </div>
+    `;
+  }
+
+  // DẠNG 5: PHẢN XẠ NGHE / PINYIN ➔ VIẾT NGHĨA TIẾNG VIỆT (AI Chấm Điểm)
+  if (drill.type === 'pinyin_to_vi') {
+    return `
+      <div class="drill-card glass-panel animate-fade-in" data-drill-id="${drill.id}" data-drill-idx="${idx}">
+        <div class="drill-card-header">
+          <span class="drill-type-badge pinyin-to-vi">${drill.badge}</span>
+          <span class="drill-num">Câu ${idx + 1}</span>
+        </div>
+
+        <div class="drill-prompt-title">${drill.title}</div>
+
+        <div class="pinyin-audio-box">
+          <button class="btn-audio-circle-md btn-play-audio-drill" data-audio="${drill.audioText}" title="Nghe phát âm">🔊</button>
+          <div class="pinyin-text-display" id="pinyinDisplay-${drill.id}">${drill.pinyin}</div>
+          <button class="btn-ghost-sm btn-toggle-pinyin" data-drill-id="${drill.id}" style="margin-left: auto;">
+            👁️ Ẩn/Hiện Pinyin
+          </button>
+        </div>
+
+        <div class="drill-input-wrapper">
+          <input type="text" class="drill-text-input input-vi" id="inputVi-${drill.id}" placeholder="${drill.samplePlaceholder}" autocomplete="off">
+        </div>
+
+        <div class="scramble-actions">
+          <button class="btn-primary-sm btn-submit-vi" data-drill-id="${drill.id}">
+            ✓ Kiểm Tra Nghĩa (AI)
+          </button>
+        </div>
+
+        <div class="drill-feedback-panel hidden" id="fb-${drill.id}"></div>
+      </div>
+    `;
+  }
+
+  return '';
 }
 
 /**
- * Gắn sự kiện cho các bài tập
+ * Gắn sự kiện tương tác & Phản hồi tức thì cho cả 5 dạng bài tập
  */
 function attachDrillEvents(container, drills, lesson) {
-  // Sắp xếp câu (Scramble)
   drills.forEach(drill => {
+    const fbEl = container.querySelector(`#fb-${drill.id}`);
+
+    // DẠNG 1: SẮP XẾP CÂU
     if (drill.type === 'scramble') {
       const pool = container.querySelector(`#pool-${drill.id}`);
       const slot = container.querySelector(`#slot-${drill.id}`);
       const btnCheck = container.querySelector(`.btn-check-scramble[data-drill-id="${drill.id}"]`);
       const btnClear = container.querySelector(`.btn-clear-scramble[data-drill-id="${drill.id}"]`);
-      const fbEl = container.querySelector(`#fb-${drill.id}`);
 
       if (!pool || !slot) return;
 
@@ -247,22 +441,19 @@ function attachDrillEvents(container, drills, lesson) {
           `;
         }
 
-        // Phát âm câu đúng
         fbEl.querySelector(`#btnAudioFb-${drill.id}`)?.addEventListener('click', () => {
           speakChinese(drill.fullTargetZh);
         });
 
-        // Nút bấm nhờ AI giải thích sâu
         fbEl.querySelector(`.btn-ai-explain[data-drill-id="${drill.id}"]`)?.addEventListener('click', () => {
           triggerAIExplanation(container, drill, assembledZh, drill.fullTargetZh, lesson);
         });
       });
     }
 
-    // Dạng Điền từ (Cloze)
+    // DẠNG 2: ĐIỀN TỪ CÒN THIẾU
     if (drill.type === 'cloze') {
       const buttons = container.querySelectorAll(`.btn-cloze-choice[data-drill-id="${drill.id}"]`);
-      const fbEl = container.querySelector(`#fb-${drill.id}`);
 
       buttons.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -280,8 +471,12 @@ function attachDrillEvents(container, drills, lesson) {
             playSound('correct');
             fbEl.innerHTML = `
               <div class="drill-fb-box success">
-                <strong>✅ Chính xác!</strong> ${drill.explanation}
-                <button class="btn-ai-explain" data-drill-id="${drill.id}" style="margin-top: 0.5rem;">
+                <div class="fb-top">
+                  <strong>✅ Chính xác!</strong>
+                  <button class="btn-audio-circle-sm" id="btnAudioFb-${drill.id}">🔊 Nghe</button>
+                </div>
+                <p style="margin: 0.2rem 0;">${drill.explanation}</p>
+                <button class="btn-ai-explain" data-drill-id="${drill.id}">
                   🤖 AI Giải Thích Thêm Về Ngữ Cảnh
                 </button>
               </div>
@@ -290,13 +485,21 @@ function attachDrillEvents(container, drills, lesson) {
             playSound('wrong');
             fbEl.innerHTML = `
               <div class="drill-fb-box error">
-                <strong>❌ Chưa đúng!</strong> ${drill.explanation}
-                <button class="btn-ai-explain" data-drill-id="${drill.id}" style="margin-top: 0.5rem;">
+                <div class="fb-top">
+                  <strong>❌ Chưa đúng!</strong>
+                  <button class="btn-audio-circle-sm" id="btnAudioFb-${drill.id}">🔊 Nghe</button>
+                </div>
+                <p style="margin: 0.2rem 0;">${drill.explanation}</p>
+                <button class="btn-ai-explain" data-drill-id="${drill.id}">
                   🤖 Hỏi AI Vì Sao Dùng '${drill.correctWord}'
                 </button>
               </div>
             `;
           }
+
+          fbEl.querySelector(`#btnAudioFb-${drill.id}`)?.addEventListener('click', () => {
+            speakChinese(drill.correctWord);
+          });
 
           fbEl.querySelector(`.btn-ai-explain[data-drill-id="${drill.id}"]`)?.addEventListener('click', () => {
             triggerAIExplanation(container, drill, drill.choices[chosenIdx], drill.correctWord, lesson);
@@ -305,10 +508,9 @@ function attachDrillEvents(container, drills, lesson) {
       });
     }
 
-    // Dạng Trắc nghiệm (Multiple Choice)
+    // DẠNG 3: TRẮC NGHIỆM NGỮ PHÁP
     if (drill.type === 'multiple-choice') {
       const buttons = container.querySelectorAll(`.btn-mc-choice[data-drill-id="${drill.id}"]`);
-      const fbEl = container.querySelector(`#fb-${drill.id}`);
 
       buttons.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -327,7 +529,7 @@ function attachDrillEvents(container, drills, lesson) {
             fbEl.innerHTML = `
               <div class="drill-fb-box success">
                 <strong>✅ Đúng rồi!</strong> ${drill.explanation}
-                <button class="btn-ai-explain" data-drill-id="${drill.id}" style="margin-top: 0.5rem;">
+                <button class="btn-ai-explain" data-drill-id="${drill.id}">
                   🤖 AI Mở Rộng Thêm Ngữ Pháp
                 </button>
               </div>
@@ -337,7 +539,7 @@ function attachDrillEvents(container, drills, lesson) {
             fbEl.innerHTML = `
               <div class="drill-fb-box error">
                 <strong>❌ Chưa đúng!</strong> ${drill.explanation}
-                <button class="btn-ai-explain" data-drill-id="${drill.id}" style="margin-top: 0.5rem;">
+                <button class="btn-ai-explain" data-drill-id="${drill.id}">
                   🤖 Nhờ AI Phân Tích Lỗi Sai
                 </button>
               </div>
@@ -348,6 +550,189 @@ function attachDrillEvents(container, drills, lesson) {
             triggerAIExplanation(container, drill, drill.choices[chosenIdx], drill.choices[drill.correctIndex], lesson);
           });
         });
+      });
+    }
+
+    // DẠNG 4: DỊCH VIỆT ➔ VIẾT TIẾNG TRUNG (AI Chấm Điểm)
+    if (drill.type === 'vi_to_zh') {
+      const btnSubmit = container.querySelector(`.btn-submit-zh[data-drill-id="${drill.id}"]`);
+      const inputEl = container.querySelector(`#inputZh-${drill.id}`);
+
+      const handleGradeViToZh = async () => {
+        const userText = inputEl.value.trim();
+        if (!userText) {
+          alert('Vui lòng gõ câu tiếng Trung của bạn trước khi chấm!');
+          return;
+        }
+
+        fbEl.classList.remove('hidden');
+        fbEl.innerHTML = `
+          <div class="drill-fb-box" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3);">
+            <div class="ai-loading-spinner" style="padding: 1rem;">
+              <div class="spinner-dot"></div>
+              <div class="spinner-dot"></div>
+              <div class="spinner-dot"></div>
+              <span>Trợ lý AI đang chấm điểm và phân tích câu của bạn...</span>
+            </div>
+          </div>
+        `;
+
+        const evalResult = await gradeWritingWithAI({
+          taskType: 'vi_to_zh',
+          prompt: drill.meaningVi,
+          targetReference: drill.targetZh,
+          userSubmission: userText,
+          grammarPoint: drill.hintFormula,
+          lessonTitle: lesson.title
+        });
+
+        const isGood = evalResult.status === 'correct';
+        const isAcceptable = evalResult.status === 'acceptable';
+
+        if (isGood) playSound('correct');
+        else if (isAcceptable) playSound('click');
+        else playSound('wrong');
+
+        fbEl.innerHTML = `
+          <div class="drill-fb-box ${isGood ? 'success' : isAcceptable ? 'acceptable' : 'error'}" style="${isAcceptable ? 'background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); color: #fef3c7;' : ''}">
+            <div class="fb-top">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span class="ai-status-tag ${evalResult.status}">
+                  ${isGood ? '✅ Chính Xác' : isAcceptable ? '💡 Chấp Nhận Được' : '❌ Chưa Chuẩn'}
+                </span>
+                <span class="ai-eval-score-badge">${evalResult.score}/100đ</span>
+              </div>
+              <button class="btn-audio-circle-sm" id="btnAudioFb-${drill.id}" title="Nghe câu chuẩn">🔊 Nghe</button>
+            </div>
+
+            <p style="margin: 0.4rem 0; font-size: 0.9rem;"><strong>Nhận xét AI:</strong> ${evalResult.feedback}</p>
+
+            <div class="ai-reference-sentence">
+              <div style="font-size: 0.78rem; color: var(--gold-500); font-weight: 700;">Câu mẫu đối chiếu:</div>
+              <div style="font-family: var(--font-chinese); font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin: 0.2rem 0;">
+                ${evalResult.improvedVersion || drill.targetZh}
+              </div>
+              <div style="font-size: 0.82rem; color: #38bdf8;">${drill.targetPinyin}</div>
+            </div>
+
+            <button class="btn-ai-explain" data-drill-id="${drill.id}">
+              🤖 Nhờ AI Giải Thích Sâu Thêm
+            </button>
+          </div>
+        `;
+
+        fbEl.querySelector(`#btnAudioFb-${drill.id}`)?.addEventListener('click', () => {
+          speakChinese(drill.targetZh);
+        });
+
+        fbEl.querySelector(`.btn-ai-explain[data-drill-id="${drill.id}"]`)?.addEventListener('click', () => {
+          triggerAIExplanation(container, drill, userText, drill.targetZh, lesson);
+        });
+      };
+
+      btnSubmit?.addEventListener('click', handleGradeViToZh);
+      inputEl?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleGradeViToZh();
+        }
+      });
+    }
+
+    // DẠNG 5: PHẢN XẠ NGHE / PINYIN ➔ VIẾT NGHĨA TIẾNG VIỆT (AI Chấm Điểm)
+    if (drill.type === 'pinyin_to_vi') {
+      const btnSubmit = container.querySelector(`.btn-submit-vi[data-drill-id="${drill.id}"]`);
+      const inputEl = container.querySelector(`#inputVi-${drill.id}`);
+      const btnPlayAudio = container.querySelector(`.btn-play-audio-drill[data-audio="${drill.audioText}"]`);
+      const btnTogglePinyin = container.querySelector(`.btn-toggle-pinyin[data-drill-id="${drill.id}"]`);
+      const pinyinEl = container.querySelector(`#pinyinDisplay-${drill.id}`);
+
+      btnPlayAudio?.addEventListener('click', () => {
+        speakChinese(drill.audioText);
+      });
+
+      btnTogglePinyin?.addEventListener('click', () => {
+        pinyinEl?.classList.toggle('hidden');
+      });
+
+      const handleGradePinyinToVi = async () => {
+        const userText = inputEl.value.trim();
+        if (!userText) {
+          alert('Vui lòng gõ nghĩa tiếng Việt của bạn trước khi kiểm tra!');
+          return;
+        }
+
+        fbEl.classList.remove('hidden');
+        fbEl.innerHTML = `
+          <div class="drill-fb-box" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3);">
+            <div class="ai-loading-spinner" style="padding: 1rem;">
+              <div class="spinner-dot"></div>
+              <div class="spinner-dot"></div>
+              <div class="spinner-dot"></div>
+              <span>AI đang phân tích ngữ nghĩa câu dịch của bạn...</span>
+            </div>
+          </div>
+        `;
+
+        const evalResult = await gradeWritingWithAI({
+          taskType: 'pinyin_to_vi',
+          prompt: drill.pinyin,
+          targetReference: drill.targetVi,
+          userSubmission: userText,
+          grammarPoint: drill.grammarExplanation,
+          lessonTitle: lesson.title
+        });
+
+        const isGood = evalResult.status === 'correct';
+        const isAcceptable = evalResult.status === 'acceptable';
+
+        if (isGood) playSound('correct');
+        else if (isAcceptable) playSound('click');
+        else playSound('wrong');
+
+        fbEl.innerHTML = `
+          <div class="drill-fb-box ${isGood ? 'success' : isAcceptable ? 'acceptable' : 'error'}" style="${isAcceptable ? 'background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); color: #fef3c7;' : ''}">
+            <div class="fb-top">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span class="ai-status-tag ${evalResult.status}">
+                  ${isGood ? '✅ Chính Xác' : isAcceptable ? '💡 Chấp Nhận Được' : '❌ Chưa Chuẩn'}
+                </span>
+                <span class="ai-eval-score-badge">${evalResult.score}/100đ</span>
+              </div>
+              <button class="btn-audio-circle-sm" id="btnAudioFb-${drill.id}" title="Nghe lại">🔊 Nghe</button>
+            </div>
+
+            <p style="margin: 0.4rem 0; font-size: 0.9rem;"><strong>Nhận xét AI:</strong> ${evalResult.feedback}</p>
+
+            <div class="ai-reference-sentence">
+              <div style="font-size: 0.78rem; color: var(--gold-500); font-weight: 700;">Nghĩa tiếng Việt chuẩn:</div>
+              <div style="font-size: 0.98rem; font-weight: 800; color: var(--text-primary); margin: 0.2rem 0;">
+                "${evalResult.improvedVersion || drill.targetVi}"
+              </div>
+              <div style="font-family: var(--font-chinese); font-size: 1.1rem; color: #38bdf8;">Chữ Hán: ${drill.targetZh}</div>
+            </div>
+
+            <button class="btn-ai-explain" data-drill-id="${drill.id}">
+              🤖 Hỏi AI Phân Tích Thêm
+            </button>
+          </div>
+        `;
+
+        fbEl.querySelector(`#btnAudioFb-${drill.id}`)?.addEventListener('click', () => {
+          speakChinese(drill.audioText);
+        });
+
+        fbEl.querySelector(`.btn-ai-explain[data-drill-id="${drill.id}"]`)?.addEventListener('click', () => {
+          triggerAIExplanation(container, drill, userText, drill.targetVi, lesson);
+        });
+      };
+
+      btnSubmit?.addEventListener('click', handleGradePinyinToVi);
+      inputEl?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleGradePinyinToVi();
+        }
       });
     }
   });
@@ -402,10 +787,10 @@ async function triggerAIExplanation(container, drill, userAnswer, correctAnswer,
   try {
     const aiResult = await explainWithAI({
       questionTitle: drill.title,
-      contextText: drill.targetZh || drill.sentenceWithBlank || '',
+      contextText: drill.targetZh || drill.sentenceWithBlank || drill.meaningVi || '',
       userAnswer: userAnswer,
       correctAnswer: correctAnswer,
-      grammarPoint: drill.hintFormula || drill.explanation || '',
+      grammarPoint: drill.hintFormula || drill.explanation || drill.grammarExplanation || '',
       lessonTitle: lesson.title
     });
 

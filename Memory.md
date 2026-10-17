@@ -190,6 +190,23 @@ chinese_learning/
     - **Kho từ vựng (`#vocab`):** Bổ sung **Bộ Lọc Bộ Thủ** (`🧩 Bộ thủ`) dropdown tự động lọc từ theo bộ thủ xuất hiện nhiều nhất; mở rộng thanh tìm kiếm cho phép tra cứu bằng ký hiệu hoặc tên tiếng Việt của bộ thủ.
     - **Trung tâm Flashcard 3D (`#flashcard` & Ôn tập bài học):** Mặt sau thẻ hiển thị danh sách chi tiết các bộ thủ cấu thành.
     - **Modal Bút thuận & Tập viết (`strokeModal.js`):** Khi chuyển qua lại giữa các chữ trong từ ghép để tập viết, banner tự động cập nhật bộ thủ của chữ đang thao tác.
+- **Cập nhật 17/10/2026 (Tối ưu Trải Nghiệm Bài Tập Phản Xạ & Tái Cấu Trúc Toàn Diện Phản Xạ Chớp Nhoáng):**
+  - **Ghép Cặp Siêu Tốc (Speed Match):** Đã loại bỏ hoàn toàn hiển thị từ Hán Việt (`hanViet`) trên các thẻ nghĩa tiếng Việt, giúp người học tập trung phản xạ nghĩa trực tiếp.
+  - **Phản Xạ Chớp Nhoáng (Lightning Reflex):**
+    1. **4 Dạng bài tập chuyên sâu:** Cho phép chọn giữa *Chữ Hán ➔ Pinyin*, *Chữ Hán ➔ Nghĩa*, *Pinyin ➔ Nghĩa* (ẩn chữ Hán), và *Tổng Hợp (kết hợp ngẫu nhiên 3 dạng)*.
+    2. **Độ dài bộ đề động ($N \times 2$):** Tự động nhân đôi toàn bộ từ vựng của bài, mỗi từ xuất hiện đúng 2 lần.
+    3. **Đếm ngược thời gian thích ứng (Adaptive Dynamic Timer):** Ban đầu 10 giây/câu, cứ sau mỗi 3 câu đúng sẽ giảm 10% thời gian còn lại (sàn tối thiểu 3.0s).
+    4. **Nâng cấp hiệu ứng chọn đúng:** Thẻ phát sáng viền ngọc bích Neon Emerald (`box-shadow`), icon tích xanh `✓`, điểm số bay bổng (`+points float toast`).
+    5. **Dừng lại khi trả lời sai / hết giờ:** Không tự động nhảy câu; hiển thị thẻ chọn sai màu đỏ, thẻ đáp án đúng màu xanh kèm Hộp ghi nhớ ôn tập từ và nút `Tiếp Tục ➔` (hỗ trợ phím `Space` / `Enter`).
+    6. **Khắc phục lỗi viền click:** Loại bỏ outline/border dính lại sau click bằng thuộc tính `outline: none !important;` cho `:focus` & `:focus-visible`.
+    7. **Bảng thống kê & Danh sách từ sai (Review Incorrect Words):** Thống kê đúng/sai, độ chính xác %, danh sách các từ đã làm sai kèm audio phát âm, hỗ trợ nút "Chỉ ôn lại các từ sai" để luyện tập lại ngay lập tức.
+    8. **Bật/Tắt tự động phát âm:** Bổ sung nút toggle 🔊/🔇 trên thanh điều khiển và màn hình sẵn sàng.
+- **Cập nhật 17/10/2026 (Nâng Cấp Phân Hệ Luyện Ngữ Pháp - 5 Dạng Bài Tập & AI Chấm Điểm):**
+  - **Bộ Lọc Đa Chọn (Multi-select Checkboxes):** Tích chọn linh hoạt giữa 5 dạng bài (`scramble`, `cloze`, `multiple-choice`, `vi_to_zh`, `pinyin_to_vi`) và nút "Tất cả", lưu trạng thái vào `localStorage`.
+  - **Công thức sinh đề ma trận chống trùng lặp:** $\text{Tổng số câu} = X\text{ (dạng)} \times Y\text{ (mẫu ngữ pháp)} \times Z\text{ (từ vựng/mẫu)}$. Cơ chế tracking `usedSentenceHashes` đảm bảo 100% không trùng lặp câu hỏi.
+  - **Phản hồi tức thì từng câu (Instant Feedback):** Làm xong câu nào biết ngay kết quả chi tiết của câu đó.
+  - **Dạng 4 (Dịch Việt ➔ Viết Tiếng Trung) & Dạng 5 (Nghe Pinyin ➔ Dịch Nghĩa):** Tích hợp hàm `gradeWritingWithAI` (Gemini API + Local Fuzzy Semantic Engine dự phòng) chấm điểm linh hoạt, bỏ qua lỗi dấu câu, chấp nhận từ đồng nghĩa và trật tự hợp lệ.
+  - **Sửa dứt điểm lỗi CSS Responsive Mobile:** Chuyển `#aiModalContainer` thành fixed portal độc lập, fix tràn viền `.drill-fb-box`, tối ưu kích thước nút bấm ngón tay trên mobile.
 - Khi bổ sung tính năng mới cho bài học, luôn kiểm tra hàm `renderInnerContent` trong [src/views/lessonsView.js](file:///d:/AI/chinese_learning/src/views/lessonsView.js) để đảm bảo tương thích đồng thời cả 3 cấp độ `HSK1_LESSONS`, `HSK2_LESSONS`, `HSK3_LESSONS`.
 - Utility phát âm nằm ở [src/utils/speech.js](file:///d:/AI/chinese_learning/src/utils/speech.js) (dùng `speakChinese(text)` và `playSound('click'|'correct'|'wrong')`).
 - HanziWriter được nạp từ CDN ở file `index.html` hoặc import qua modal [src/components/strokeModal.js](file:///d:/AI/chinese_learning/src/components/strokeModal.js).
