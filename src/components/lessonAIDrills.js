@@ -1,9 +1,10 @@
 import { playSound, speakChinese } from '../utils/speech.js';
 import { generateLocalDrills, explainWithAI, gradeWritingWithAI, getAIConfig, saveAIConfig } from '../utils/aiService.js';
+import { renderLessonAISpeaking } from './lessonAISpeaking.js';
 
-export function renderLessonAIDrills(container, lesson) {
+export function renderLessonAIDrills(container, lesson, options = {}) {
   // Lấy cấu hình đã lưu từ localStorage hoặc mặc định
-  let selectedTypes = ['scramble', 'cloze', 'multiple-choice', 'vi_to_zh', 'pinyin_to_vi'];
+  let selectedTypes = ['scramble', 'cloze', 'multiple-choice', 'vi_to_zh', 'pinyin_to_vi', 'speaking_dialogue'];
   try {
     const savedTypes = localStorage.getItem('hsk_drill_selected_types');
     if (savedTypes) {
@@ -23,12 +24,15 @@ export function renderLessonAIDrills(container, lesson) {
     }
   } catch (e) {}
 
-  let drills = generateLocalDrills(lesson, { selectedTypes, wordsPerGrammar });
+  // Lọc các dạng thông thường (ngoại trừ speaking_dialogue) cho generator câu hỏi tĩnh
+  const staticTypes = selectedTypes.filter(t => t !== 'speaking_dialogue');
+  let drills = generateLocalDrills(lesson, { selectedTypes: staticTypes, wordsPerGrammar });
 
   function render() {
     const grammarCount = Math.max(1, (lesson.grammarPoints || []).length);
-    const formulaStr = `${selectedTypes.length} dạng × ${grammarCount} ngữ pháp × ${wordsPerGrammar} từ = ${drills.length} câu`;
-    const isAllSelected = selectedTypes.length === 5;
+    const hasSpeaking = selectedTypes.includes('speaking_dialogue');
+    const formulaStr = `${staticTypes.length} dạng viết × ${grammarCount} ngữ pháp × ${wordsPerGrammar} từ = ${drills.length} câu${hasSpeaking ? ' + 🎙️ Studio Luyện Nói Đối Thoại' : ''}`;
+    const isAllSelected = selectedTypes.length === 6;
 
     container.innerHTML = `
       <div class="lesson-ai-drills-wrapper animate-fade-in">
@@ -36,14 +40,20 @@ export function renderLessonAIDrills(container, lesson) {
         <div class="ai-filter-toolbar glass-panel">
           <div class="filter-header-row">
             <span class="filter-title">🎯 Chọn Dạng Bài Tập:</span>
-            <span class="drills-total-badge" id="drillsTotalCount">Bộ đề: ${drills.length} Câu</span>
+            <span class="drills-total-badge" id="drillsTotalCount">
+              ${hasSpeaking ? '🎙️ Có Luyện Nói + ' : ''}Bộ đề: ${drills.length} Câu
+            </span>
           </div>
 
-          <!-- Checkboxes Grid -->
+          <!-- Checkboxes Grid (6 Dạng Bài Tập) -->
           <div class="drill-checkboxes-grid">
             <label class="btn-filter-pill ${isAllSelected ? 'active' : ''}">
               <input type="checkbox" id="chkAllDrills" ${isAllSelected ? 'checked' : ''}>
-              <span>🌟 Tất Cả (5 Dạng)</span>
+              <span>🌟 Tất Cả (6 Dạng)</span>
+            </label>
+            <label class="btn-filter-pill ${selectedTypes.includes('speaking_dialogue') ? 'active' : ''}">
+              <input type="checkbox" class="chk-drill-type" data-type="speaking_dialogue" ${selectedTypes.includes('speaking_dialogue') ? 'checked' : ''}>
+              <span>🎙️ Luyện Nói Đối Thoại (AI)</span>
             </label>
             <label class="btn-filter-pill ${selectedTypes.includes('scramble') ? 'active' : ''}">
               <input type="checkbox" class="chk-drill-type" data-type="scramble" ${selectedTypes.includes('scramble') ? 'checked' : ''}>
@@ -95,20 +105,39 @@ export function renderLessonAIDrills(container, lesson) {
           </div>
         </div>
 
-        <!-- Drills List -->
-        <div class="ai-drills-list" id="aiDrillsList">
-          ${drills.length > 0 
-            ? drills.map((drill, dIdx) => renderDrillItem(drill, dIdx)).join('')
-            : `<div class="glass-panel" style="padding: 2.5rem; text-align: center; color: var(--text-muted);">
-                Vui lòng chọn ít nhất 1 dạng bài tập ở bộ lọc phía trên để bắt đầu luyện tập!
-              </div>`
-          }
-        </div>
+        <!-- DẠNG 6: STUDIO LUYỆN NÓI ĐỐI THOẠI 1-1 VỚI AI (NẾU ĐƯỢC CHỌN) -->
+        ${hasSpeaking ? `
+          <div class="speaking-studio-mount-container" id="speakingStudioMount"></div>
+        ` : ''}
+
+        <!-- DANH SÁCH BÀI TẬP TĨNH (NẾU CÓ) -->
+        ${staticTypes.length > 0 ? `
+          <div class="ai-drills-list" id="aiDrillsList">
+            ${drills.length > 0 
+              ? drills.map((drill, dIdx) => renderDrillItem(drill, dIdx)).join('')
+              : `<div class="glass-panel" style="padding: 2.5rem; text-align: center; color: var(--text-muted);">
+                  Không có câu hỏi tĩnh cho các dạng đã chọn.
+                </div>`
+            }
+          </div>
+        ` : (!hasSpeaking ? `
+          <div class="glass-panel" style="padding: 2.5rem; text-align: center; color: var(--text-muted);">
+            Vui lòng chọn ít nhất 1 dạng bài tập ở bộ lọc phía trên để bắt đầu luyện tập!
+          </div>
+        ` : '')}
 
         <!-- AI Deep Explanation Modal Container (Portal) -->
         <div id="aiModalContainer"></div>
       </div>
     `;
+
+    // Khởi tạo Studio Luyện Nói nếu đang bật
+    if (hasSpeaking) {
+      const mountEl = container.querySelector('#speakingStudioMount');
+      if (mountEl) {
+        renderLessonAISpeaking(mountEl, lesson, options);
+      }
+    }
 
     // Gắn sự kiện Checkbox filter
     attachFilterEvents();
@@ -116,7 +145,8 @@ export function renderLessonAIDrills(container, lesson) {
     // Gắn sự kiện nút Tạo đề mới
     container.querySelector('#btnRegenerateDrills')?.addEventListener('click', () => {
       playSound('click');
-      drills = generateLocalDrills(lesson, { selectedTypes, wordsPerGrammar });
+      const staticList = selectedTypes.filter(t => t !== 'speaking_dialogue');
+      drills = generateLocalDrills(lesson, { selectedTypes: staticList, wordsPerGrammar });
       render();
     });
 
@@ -127,7 +157,9 @@ export function renderLessonAIDrills(container, lesson) {
     });
 
     // Gắn sự kiện cho từng loại bài tập (Kiểm tra & biết ngay kết quả)
-    attachDrillEvents(container, drills, lesson);
+    if (staticTypes.length > 0) {
+      attachDrillEvents(container, drills, lesson);
+    }
   }
 
   function attachFilterEvents() {
@@ -138,12 +170,13 @@ export function renderLessonAIDrills(container, lesson) {
     allChk?.addEventListener('change', () => {
       playSound('click');
       if (allChk.checked) {
-        selectedTypes = ['scramble', 'cloze', 'multiple-choice', 'vi_to_zh', 'pinyin_to_vi'];
+        selectedTypes = ['scramble', 'cloze', 'multiple-choice', 'vi_to_zh', 'pinyin_to_vi', 'speaking_dialogue'];
       } else {
-        selectedTypes = ['scramble']; // Giữ ít nhất 1 dạng
+        selectedTypes = ['speaking_dialogue']; // Giữ lại dạng nói
       }
       localStorage.setItem('hsk_drill_selected_types', JSON.stringify(selectedTypes));
-      drills = generateLocalDrills(lesson, { selectedTypes, wordsPerGrammar });
+      const staticList = selectedTypes.filter(t => t !== 'speaking_dialogue');
+      drills = generateLocalDrills(lesson, { selectedTypes: staticList, wordsPerGrammar });
       render();
     });
 
@@ -160,7 +193,8 @@ export function renderLessonAIDrills(container, lesson) {
           }
         }
         localStorage.setItem('hsk_drill_selected_types', JSON.stringify(selectedTypes));
-        drills = generateLocalDrills(lesson, { selectedTypes, wordsPerGrammar });
+        const staticList = selectedTypes.filter(t => t !== 'speaking_dialogue');
+        drills = generateLocalDrills(lesson, { selectedTypes: staticList, wordsPerGrammar });
         render();
       });
     });
@@ -169,10 +203,19 @@ export function renderLessonAIDrills(container, lesson) {
       playSound('click');
       wordsPerGrammar = parseInt(e.target.value, 10) || 2;
       localStorage.setItem('hsk_drill_words_per_grammar', wordsPerGrammar);
-      drills = generateLocalDrills(lesson, { selectedTypes, wordsPerGrammar });
+      const staticList = selectedTypes.filter(t => t !== 'speaking_dialogue');
+      drills = generateLocalDrills(lesson, { selectedTypes: staticList, wordsPerGrammar });
       render();
     });
   }
+
+  // Cleanup handler
+  container._cleanup = () => {
+    const mountEl = container.querySelector('#speakingStudioMount');
+    if (mountEl && typeof mountEl._cleanup === 'function') {
+      mountEl._cleanup();
+    }
+  };
 
   render();
 }

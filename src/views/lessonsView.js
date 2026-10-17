@@ -306,6 +306,7 @@ export function renderLessonsView(container) {
   }
 
   function renderInnerContent(contentEl, lesson) {
+    const activeLevel = HSK_LEVELS[currentLevelId] || HSK_LEVELS['hsk1'];
     if (contentEl && typeof contentEl._cleanup === 'function') {
       contentEl._cleanup();
       contentEl._cleanup = null;
@@ -456,7 +457,7 @@ export function renderLessonsView(container) {
         } else if (activeReviewSubTab === 'reflex') {
           renderLessonReflex(subContentEl, lesson);
         } else if (activeReviewSubTab === 'ai') {
-          renderLessonAIDrills(subContentEl, lesson);
+          renderLessonAIDrills(subContentEl, lesson, { allLessons: activeLevel.data });
         }
       }
 

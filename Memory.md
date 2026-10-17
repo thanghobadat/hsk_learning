@@ -207,7 +207,25 @@ chinese_learning/
   - **Phản hồi tức thì từng câu (Instant Feedback):** Làm xong câu nào biết ngay kết quả chi tiết của câu đó.
   - **Dạng 4 (Dịch Việt ➔ Viết Tiếng Trung) & Dạng 5 (Nghe Pinyin ➔ Dịch Nghĩa):** Tích hợp hàm `gradeWritingWithAI` (Gemini API + Local Fuzzy Semantic Engine dự phòng) chấm điểm linh hoạt, bỏ qua lỗi dấu câu, chấp nhận từ đồng nghĩa và trật tự hợp lệ.
   - **Sửa dứt điểm lỗi CSS Responsive Mobile:** Chuyển `#aiModalContainer` thành fixed portal độc lập, fix tràn viền `.drill-fb-box`, tối ưu kích thước nút bấm ngón tay trên mobile.
+- **Cập nhật 17/10/2026 (Ra Mắt Dạng 6: Studio Luyện Nói Đối Thoại 1-1 Với AI - Kiến Thức Lũy Kế):**
+  - **Kiến thức lũy kế (Cumulative Knowledge Engine):** Tự động gom toàn bộ từ vựng và ngữ pháp từ **Bài 1 đến Bài hiện tại** để đưa vào kịch bản giao tiếp đời sống, chống hiện tượng "học trước quên sau".
+  - **Toàn quyền thiết lập & Chỉnh sửa kịch bản (Scenario Customization):**
+    - Chọn vai: Nhân vật A (Nói trước mở đầu) hoặc Nhân vật B (AI mở đầu, bạn đáp lại).
+    - Chọn số câu đối thoại: 4, 6, 8, hoặc 10 câu.
+    - Chỉnh sửa kịch bản dạng thẻ (Card list): Câu của bạn hiển thị bằng **Tiếng Việt** làm đề bài phản xạ để bạn nhìn vào đó và tự nói tiếng Trung; câu của AI hiển thị bằng **Tiếng Trung + Pinyin + Dịch**.
+    - Nút `[🤖 Cập nhật câu AI theo câu của tôi]`: Tự động thích ứng câu trả lời của AI theo câu tiếng Việt người dùng sửa đổi.
+  - **Thực chiến luyện nói & Kiểm soát nhịp độ (Voice Interactive Practice):**
+    - Thu âm giọng thật với `MediaRecorder` và nhận diện giọng nói `Web Speech API (zh-CN)`.
+    - Hộp hiển thị chữ Hán nhận diện trực tiếp, cho phép sửa nhanh chữ nếu cần hoặc gõ phím bổ trợ (hỗ trợ phím `Enter`).
+    - Nút `[👉 Gửi & Mời AI Trả Lời]`: Người dùng chủ động 100% nhịp độ, không bị AI cướp lời.
+    - AI phản hồi bằng âm thanh giọng chuẩn bản xứ (`SpeechSynthesis`) + chấm điểm ngữ pháp nhẹ nhàng.
+  - **Nghe lại toàn bộ hội thoại & Biên bản song ngữ (Sequential Radio Player & Bilingual Transcript):**
+    - Nút `[▶️ Phát Toàn Bộ Hội Thoại]`: Tự động phát tuần tự như radio: **[Giọng thật của bạn] ➔ [Giọng chuẩn AI] ➔ [Giọng thật của bạn]...** kèm hiệu ứng viền sáng chạy theo lượt đang phát.
+    - Nút gạt `[👁️ Ẩn/Hiện Tiếng Việt]`: Tùy chỉnh ẩn/hiện dịch nghĩa để người học tự thử thách đọc hiểu thuần tiếng Trung.
+    - Transcript chi tiết từng lượt có nút nghe lại giọng thật của bạn và nút nghe giọng mẫu AI để đối chiếu phát âm.
 - Khi bổ sung tính năng mới cho bài học, luôn kiểm tra hàm `renderInnerContent` trong [src/views/lessonsView.js](file:///d:/AI/chinese_learning/src/views/lessonsView.js) để đảm bảo tương thích đồng thời cả 3 cấp độ `HSK1_LESSONS`, `HSK2_LESSONS`, `HSK3_LESSONS`.
 - Utility phát âm nằm ở [src/utils/speech.js](file:///d:/AI/chinese_learning/src/utils/speech.js) (dùng `speakChinese(text)` và `playSound('click'|'correct'|'wrong')`).
+- Utility thu âm micro và nhận diện giọng nói nằm ở [src/utils/voiceService.js](file:///d:/AI/chinese_learning/src/utils/voiceService.js).
 - HanziWriter được nạp từ CDN ở file `index.html` hoặc import qua modal [src/components/strokeModal.js](file:///d:/AI/chinese_learning/src/components/strokeModal.js).
+
 
