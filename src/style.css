@@ -8240,6 +8240,547 @@ html, body {
   }
 }
 
+/* ==========================================================================
+   DAILY STUDY TIME TRACKER & ANALYTICS MODAL
+   ========================================================================== */
+
+/* Header Study Timer Pill */
+.study-timer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.32);
+  color: var(--emerald-500);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: var(--font-sans);
+  outline: none;
+}
+
+.study-timer-pill.paused {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: var(--text-secondary);
+}
+
+.study-timer-pill:hover {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: var(--emerald-500);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--emerald-glow);
+}
+
+.study-timer-pill strong {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.timer-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--emerald-500);
+  box-shadow: 0 0 8px var(--emerald-500);
+  flex-shrink: 0;
+  transition: var(--transition);
+}
+
+.timer-status-dot.idle {
+  background: var(--gold-500);
+  box-shadow: none;
+  opacity: 0.75;
+}
+
+@media (max-width: 640px) {
+  .header-actions {
+    gap: 0.45rem;
+  }
+  .study-timer-pill {
+    padding: 0.25rem 0.55rem;
+    font-size: 0.75rem;
+    gap: 0.3rem;
+  }
+  .streak-prefix {
+    display: none;
+  }
+}
+
+/* Roadmap Daily Study Summary Widget */
+.roadmap-daily-timer-box {
+  margin-top: 1.1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.roadmap-daily-timer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.roadmap-daily-timer-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.btn-roadmap-stats {
+  background: rgba(59, 130, 246, 0.14);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: var(--blue-500);
+  padding: 0.22rem 0.65rem;
+  border-radius: var(--radius-full);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-roadmap-stats:hover {
+  background: var(--blue-500);
+  color: #ffffff;
+}
+
+.roadmap-daily-timer-vals {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.roadmap-daily-timer-vals strong {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--emerald-500);
+}
+
+.roadmap-daily-goal-text {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.roadmap-daily-bar-track {
+  width: 100%;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+[data-theme="light"] .roadmap-daily-bar-track {
+  background: rgba(15, 23, 42, 0.1);
+}
+
+.roadmap-daily-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue-500), var(--emerald-500));
+  border-radius: var(--radius-full);
+  transition: width 0.4s ease;
+}
+
+/* Study Stats Modal Dialog */
+.study-modal-dialog {
+  max-width: 580px;
+}
+
+.study-today-hero {
+  padding: 1.15rem 1.25rem;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(59, 130, 246, 0.08) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+[data-theme="light"] .study-today-hero {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(59, 130, 246, 0.06) 100%);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.study-today-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.study-today-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.study-today-clock {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(1.85rem, 5vw, 2.35rem);
+  font-weight: 800;
+  color: var(--emerald-500);
+  line-height: 1.15;
+  margin-top: 0.15rem;
+}
+
+.study-today-readable {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.study-live-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-full);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.study-live-status.active {
+  background: rgba(16, 185, 129, 0.16);
+  color: var(--emerald-500);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.study-live-status.idle {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--gold-500);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.study-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.study-goal-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.study-goal-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+}
+
+.study-goal-pct {
+  font-weight: 800;
+  color: var(--emerald-500);
+}
+
+.study-goal-bar-track {
+  width: 100%;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+[data-theme="light"] .study-goal-bar-track {
+  background: rgba(15, 23, 42, 0.1);
+}
+
+.study-goal-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue-500), var(--emerald-500));
+  border-radius: var(--radius-full);
+  transition: width 0.35s ease;
+}
+
+.study-goal-bar-fill.completed {
+  background: linear-gradient(90deg, var(--emerald-500), #34d399);
+}
+
+.study-goal-selector {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding-top: 0.45rem;
+  border-top: 1px dashed var(--border-subtle);
+}
+
+.goal-selector-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.goal-pills-row {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.btn-goal-pill {
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-goal-pill:hover {
+  border-color: var(--emerald-500);
+  color: var(--text-primary);
+}
+
+.btn-goal-pill.active {
+  background: var(--emerald-500);
+  border-color: var(--emerald-500);
+  color: #ffffff;
+}
+
+/* 4 KPI Summary Grid */
+.study-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.6rem;
+}
+
+@media (max-width: 520px) {
+  .study-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.study-kpi-card {
+  padding: 0.75rem 0.65rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  text-align: center;
+}
+
+[data-theme="light"] .study-kpi-card {
+  background: #f8fafc;
+}
+
+.study-kpi-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.study-kpi-value {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+/* 7-Day Bar Chart */
+.study-chart-section,
+.study-history-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.study-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.study-section-head h3 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.study-chart-legend {
+  font-size: 0.75rem;
+  color: var(--emerald-500);
+  font-weight: 600;
+}
+
+.study-bars-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.45rem;
+  padding: 0.85rem 0.65rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+}
+
+[data-theme="light"] .study-bars-grid {
+  background: #f8fafc;
+}
+
+.study-bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.study-bar-val {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.study-bar-track {
+  width: 100%;
+  max-width: 28px;
+  height: 92px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+[data-theme="light"] .study-bar-track {
+  background: #e2e8f0;
+}
+
+.study-bar-fill {
+  width: 100%;
+  background: linear-gradient(180deg, #60a5fa, var(--blue-500));
+  border-radius: 6px 6px 0 0;
+  transition: height 0.35s ease;
+}
+
+.study-bar-fill.met-goal {
+  background: linear-gradient(180deg, #34d399, var(--emerald-500));
+}
+
+.study-bar-fill.empty {
+  background: rgba(148, 163, 184, 0.25);
+}
+
+.study-bar-col.is-today .study-bar-day {
+  color: var(--crimson-500);
+  font-weight: 800;
+}
+
+.study-bar-day {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.study-bar-date {
+  font-size: 0.66rem;
+  color: var(--text-muted);
+}
+
+/* History Daily Log */
+.study-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.study-history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.85rem;
+}
+
+[data-theme="light"] .study-history-row {
+  background: #f8fafc;
+}
+
+.study-history-row.today-row {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.study-history-date {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.study-history-right {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.history-duration {
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.history-goal-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--text-secondary);
+}
+
+.history-goal-badge.met {
+  background: rgba(16, 185, 129, 0.18);
+  color: var(--emerald-500);
+}
+
+.study-history-empty {
+  text-align: center;
+  padding: 1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.study-footnote {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  text-align: center;
+}
+
+
 
 
 

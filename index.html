@@ -56,9 +56,14 @@
 
         <!-- Utility Buttons -->
         <div class="header-actions">
+          <button id="btnStudyTimer" class="study-timer-pill" type="button" title="Thời gian tương tác hôm nay (Bấm để xem thống kê chi tiết)">
+            <span class="timer-status-dot active" id="studyTimerDot"></span>
+            <span class="timer-icon">⏱️</span>
+            <strong id="studyTimerCounter">00:00</strong>
+          </button>
           <div class="streak-pill" title="Chuỗi ngày học liên tục của bạn">
             <span>🔥</span>
-            <span>Chuỗi: <strong id="streakCounter">1</strong> ngày</span>
+            <span><span class="streak-prefix">Chuỗi: </span><strong id="streakCounter">1</strong> ngày</span>
           </div>
           <button id="btnThemeToggle" class="btn-icon-header" title="Đổi chế độ Sáng / Tối">
             ☀️

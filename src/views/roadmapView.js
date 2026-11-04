@@ -1,7 +1,19 @@
 import { ROADMAP_DATA } from '../data/roadmapData.js';
 import { playSound } from '../utils/speech.js';
+import {
+  subscribeStudyTimer,
+  formatStudyDurationVi
+} from '../utils/studyTimer.js';
+import { openStudyStatsModal } from '../components/studyStatsModal.js';
+
+let unsubscribeRoadmapTimer = null;
 
 export function renderRoadmapView(container) {
+  if (unsubscribeRoadmapTimer) {
+    unsubscribeRoadmapTimer();
+    unsubscribeRoadmapTimer = null;
+  }
+
   const completedWeeks = JSON.parse(localStorage.getItem('hsk_completed_weeks') || '[]');
   const totalWeeks = 32;
   const progressPercent = Math.round((completedWeeks.length / totalWeeks) * 100);
@@ -61,6 +73,23 @@ export function renderRoadmapView(container) {
             <span>Mục tiêu: Đạt chuẩn HSK 3</span>
           </div>
           <button id="btnResetProgress" class="btn-text-subtle">Cài lại tiến độ</button>
+
+          <!-- Tóm tắt thời gian tương tác hôm nay -->
+          <div class="roadmap-daily-timer-box">
+            <div class="roadmap-daily-timer-top">
+              <span class="roadmap-daily-timer-label">⏱️ Tương tác hôm nay:</span>
+              <button type="button" id="btnOpenStudyStatsRoadmap" class="btn-roadmap-stats">
+                📊 Nhật ký ngày
+              </button>
+            </div>
+            <div class="roadmap-daily-timer-vals">
+              <strong id="roadmapTodayTimeText">0 giây</strong>
+              <span class="roadmap-daily-goal-text">Mục tiêu: <span id="roadmapGoalMinText">30</span> phút/ngày</span>
+            </div>
+            <div class="roadmap-daily-bar-track">
+              <div class="roadmap-daily-bar-fill" id="roadmapTodayBarFill" style="width: 0%"></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -223,7 +252,7 @@ export function renderRoadmapView(container) {
     });
   }
 
-  // Nút chuyển nhanh vào 20 Bài học HSK 1
+  // Nút chuyển nhanh vào 75 Bài học HSK 3.0
   const btnGoToLessons = container.querySelector('#btnGoToLessons');
   if (btnGoToLessons) {
     btnGoToLessons.addEventListener('click', () => {
@@ -234,4 +263,33 @@ export function renderRoadmapView(container) {
       }
     });
   }
+
+  // Gắn sự kiện mở Modal Thống kê thời gian học & cập nhật trực tiếp
+  const btnOpenStats = container.querySelector('#btnOpenStudyStatsRoadmap');
+  if (btnOpenStats) {
+    btnOpenStats.addEventListener('click', () => {
+      playSound('click');
+      openStudyStatsModal();
+    });
+  }
+
+  const todayTimeEl = container.querySelector('#roadmapTodayTimeText');
+  const goalMinEl = container.querySelector('#roadmapGoalMinText');
+  const todayBarEl = container.querySelector('#roadmapTodayBarFill');
+
+  unsubscribeRoadmapTimer = subscribeStudyTimer(({ todaySeconds, goalMinutes }) => {
+    if (!todayTimeEl || !todayTimeEl.isConnected) {
+      if (unsubscribeRoadmapTimer) {
+        unsubscribeRoadmapTimer();
+        unsubscribeRoadmapTimer = null;
+      }
+      return;
+    }
+    todayTimeEl.textContent = formatStudyDurationVi(todaySeconds);
+    if (goalMinEl) goalMinEl.textContent = goalMinutes;
+    if (todayBarEl) {
+      const pct = Math.min(100, Math.round((todaySeconds / (goalMinutes * 60)) * 100));
+      todayBarEl.style.width = `${pct}%`;
+    }
+  });
 }

@@ -1,5 +1,12 @@
 import './style.css';
 import { playSound } from './utils/speech.js';
+import {
+  initStudyTimer,
+  subscribeStudyTimer,
+  formatStudyClock,
+  getLocalDateKey
+} from './utils/studyTimer.js';
+import { openStudyStatsModal } from './components/studyStatsModal.js';
 import { renderRoadmapView } from './views/roadmapView.js';
 import { renderLessonsView } from './views/lessonsView.js';
 import { renderPinyinView } from './views/pinyinView.js';
@@ -9,15 +16,17 @@ import { renderRadicalsView } from './views/radicalsView.js';
 import { renderGrammarView } from './views/grammarView.js';
 import { renderQuizView } from './views/quizView.js';
 
-// --- Quản lý chuỗi ngày học liên tục (Streak) ---
+// --- Quản lý chuỗi ngày học liên tục (Streak) theo ngày địa phương ---
 function updateLearningStreak() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateKey();
   const lastActive = localStorage.getItem('hsk_last_active_date');
   let streak = parseInt(localStorage.getItem('hsk_streak_days') || '1', 10);
 
-  if (lastActive) {
-    const lastDate = new Date(lastActive);
-    const currentDate = new Date(today);
+  if (lastActive && lastActive !== today) {
+    const [y1, m1, d1] = lastActive.split('-').map(Number);
+    const [y2, m2, d2] = today.split('-').map(Number);
+    const lastDate = new Date(y1, m1 - 1, d1);
+    const currentDate = new Date(y2, m2 - 1, d2);
     const diffDays = Math.round((currentDate - lastDate) / (1000 * 60 * 60 * 24));
 
     if (diffDays === 1) {
@@ -100,6 +109,38 @@ document.addEventListener('DOMContentLoaded', () => {
     brandLogo.addEventListener('click', () => {
       playSound('click');
       switchTab('roadmap');
+    });
+  }
+
+  // Khởi động bộ đếm thời gian tương tác học hằng ngày
+  initStudyTimer();
+  const btnStudyTimer = document.querySelector('#btnStudyTimer');
+  const studyTimerCounter = document.querySelector('#studyTimerCounter');
+  const studyTimerDot = document.querySelector('#studyTimerDot');
+
+  subscribeStudyTimer(({ todaySeconds, isActive, stateReason, goalMinutes }) => {
+    if (studyTimerCounter) {
+      studyTimerCounter.textContent = formatStudyClock(todaySeconds);
+    }
+    if (studyTimerDot) {
+      studyTimerDot.classList.toggle('active', isActive);
+      studyTimerDot.classList.toggle('idle', !isActive);
+    }
+    if (btnStudyTimer) {
+      btnStudyTimer.classList.toggle('paused', !isActive);
+      const statusNote = isActive
+        ? 'Đang học (có focus)'
+        : stateReason === 'unfocused'
+          ? 'Tạm dừng (không focus vào website)'
+          : 'Tạm nghỉ (không thao tác quá 60s)';
+      btnStudyTimer.title = `Hôm nay: ${formatStudyClock(todaySeconds)} / Mục tiêu ${goalMinutes}p — ${statusNote} (Bấm xem chi tiết)`;
+    }
+  });
+
+  if (btnStudyTimer) {
+    btnStudyTimer.addEventListener('click', () => {
+      playSound('click');
+      openStudyStatsModal();
     });
   }
 

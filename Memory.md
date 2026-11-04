@@ -1,7 +1,7 @@
 # 🧠 Project Memory: HSK 3.0 Master
 
 > **Phiên bản:** HSK 3.0 Master (Sơ Cấp: HSK 1 - HSK 2 - HSK 3)  
-> **Cập nhật lần cuối:** 29/09/2026  
+> **Cập nhật lần cuối:** 04/11/2026  
 > **Mục đích file:** Tóm tắt nhanh toàn bộ kiến trúc, dữ liệu, tính năng và trạng thái hiện tại của dự án để tiếp tục phát triển bất kỳ lúc nào mà không cần rà soát lại toàn bộ mã nguồn.
 
 ---
@@ -114,11 +114,13 @@ chinese_learning/
 │   │   └── quizView.js          # View đấu trường trắc nghiệm
 │   ├── components/
 │   │   ├── strokeModal.js       # Modal HanziWriter vẽ từng nét chữ & tập viết
+│   │   ├── studyStatsModal.js   # Modal thống kê thời gian tương tác 7 ngày & nhật ký ngày
 │   │   ├── lessonFlashcard.js   # Flashcard 3D trong tab Ôn tập bài học
 │   │   ├── lessonReflex.js      # Bài tập phản xạ (Speed Match & Lightning 5s)
 │   │   └── lessonAIDrills.js    # AI Luyện ngữ pháp (Scramble, Cloze, AI Modal)
 │   └── utils/
 │       ├── speech.js            # TTS & phát âm audio tiếng Trung
+│       ├── studyTimer.js        # Bộ đếm thời gian tương tác thực tế hằng ngày lưu localStorage
 │       └── aiService.js         # Tích hợp Gemini API & Local AI Engine dự phòng
 ```
 
@@ -134,7 +136,10 @@ chinese_learning/
 | `hsk_hsk3_lesson_id` | String (vd: `'hsk3-lesson-1'`) | Bài học đang chọn tại HSK 3 |
 | `hsk_completed_lessons`| Array (JSON) | Danh sách ID các bài đã bấm hoàn thành |
 | `hsk_theme` | `'dark' \| 'light'` | Chế độ giao diện Sáng / Tối |
-| `hsk_study_streak` | Object | Dữ liệu chuỗi ngày học tập |
+| `hsk_last_active_date` | String (`'YYYY-MM-DD'`) | Ngày học gần nhất (múi giờ địa phương) |
+| `hsk_streak_days` | String (Number) | Số ngày học liên tục |
+| `hsk_daily_study_time` | Object (JSON `{ "YYYY-MM-DD": seconds }`) | Thời gian tương tác thực tế mỗi ngày (đơn vị: giây) |
+| `hsk_daily_goal_minutes`| String (Number, mặc định `'30'`) | Mục tiêu số phút học mỗi ngày |
 | `gemini_api_key` | String | API key Google Gemini (nếu người dùng cấu hình riêng) |
 
 ---
@@ -223,6 +228,9 @@ chinese_learning/
     - Nút `[▶️ Phát Toàn Bộ Hội Thoại]`: Tự động phát tuần tự như radio: **[Giọng thật của bạn] ➔ [Giọng chuẩn AI] ➔ [Giọng thật của bạn]...** kèm hiệu ứng viền sáng chạy theo lượt đang phát.
     - Nút gạt `[👁️ Ẩn/Hiện Tiếng Việt]`: Tùy chỉnh ẩn/hiện dịch nghĩa để người học tự thử thách đọc hiểu thuần tiếng Trung.
     - Transcript chi tiết từng lượt có nút nghe lại giọng thật của bạn và nút nghe giọng mẫu AI để đối chiếu phát âm.
+- **Cập nhật 04/11/2026 (Hệ Thống Đếm Thời Gian Tương Tác Hằng Ngày & Nhật Ký Học Tập):**
+  - Xây dựng [src/utils/studyTimer.js](file:///d:/AI/chinese_learning/src/utils/studyTimer.js) chỉ tính giờ khi người học đang **focus trực tiếp vào website** (`document.hasFocus()` + sự kiện `focus`/`blur`) và có tương tác thực tế; dừng đếm ngay lập tức khi bấm sang ứng dụng/cửa sổ khác, chuyển/ẩn tab hoặc không thao tác quá 60 giây; tự tách ngày mới theo múi giờ địa phương và lưu cộng dồn an toàn vào `localStorage` (`hsk_daily_study_time`, `hsk_daily_goal_minutes`).
+  - Hiển thị đồng hồ trực tiếp trên thanh Header (`#btnStudyTimer`), thẻ tiến độ ngày tại trang Lộ trình (`#roadmap`), và bảng thống kê chi tiết [src/components/studyStatsModal.js](file:///d:/AI/chinese_learning/src/components/studyStatsModal.js) (tuỳ chỉnh mục tiêu 15–90 phút/ngày, 4 thẻ KPI, biểu đồ 7 ngày gần nhất, nhật ký chi tiết từng ngày).
 - Khi bổ sung tính năng mới cho bài học, luôn kiểm tra hàm `renderInnerContent` trong [src/views/lessonsView.js](file:///d:/AI/chinese_learning/src/views/lessonsView.js) để đảm bảo tương thích đồng thời cả 3 cấp độ `HSK1_LESSONS`, `HSK2_LESSONS`, `HSK3_LESSONS`.
 - Utility phát âm nằm ở [src/utils/speech.js](file:///d:/AI/chinese_learning/src/utils/speech.js) (dùng `speakChinese(text)` và `playSound('click'|'correct'|'wrong')`).
 - Utility thu âm micro và nhận diện giọng nói nằm ở [src/utils/voiceService.js](file:///d:/AI/chinese_learning/src/utils/voiceService.js).
